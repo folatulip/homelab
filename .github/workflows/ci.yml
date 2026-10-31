@@ -36,8 +36,8 @@ jobs:
       run:
         working-directory: terraform
     steps:
-      - uses: actions/checkout@v7.0.1
-      - uses: hashicorp/setup-terraform@v4.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
@@ -47,7 +47,7 @@ jobs:
         run: terraform init -backend=false -input=false
       - name: validate
         run: terraform validate
-      - uses: terraform-linters/setup-tflint@v6.3.2
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
         with:
           tflint_version: ${{ env.TFLINT_VERSION }}
       - name: tflint
@@ -61,7 +61,7 @@ jobs:
     name: Talos config
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install talosctl (same version as the cluster, from terraform/main.tf)
         run: |
           v=$(sed -n 's/.*talos_version *= *"\(v[0-9.]*\)".*/\1/p' terraform/main.tf | head -1)
@@ -76,7 +76,7 @@ jobs:
     name: Kubernetes manifests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install kubeconform
         run: |
           curl -sSfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" |
@@ -89,7 +89,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # scan the whole history, not just the latest commit
       - name: Install gitleaks
