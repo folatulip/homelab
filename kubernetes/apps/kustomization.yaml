@@ -1,0 +1,5 @@
+# Apps Flux deploys. Folders not listed here (e.g. pvc-test) are ignored.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - hello

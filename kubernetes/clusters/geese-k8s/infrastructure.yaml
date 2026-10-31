@@ -1,0 +1,68 @@
+# Cluster add-ons, applied by Flux from this repo in dependency order.
+# Each entry points at a folder under kubernetes/infrastructure/.
+# wait: true = a Kustomization is only Ready once its Deployments/DaemonSets
+# are healthy, so dependents (dependsOn) don't start too early.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: metallb
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/metallb
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+# IPAddressPool/L2Advertisement are MetalLB CRDs; they need MetalLB first.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: metallb-config
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: metallb
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/metallb-config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+# Its LoadBalancer Service needs an IP pool to get 10.10.20.201.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: metallb-config
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/traefik
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: local-path-provisioner
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/local-path-provisioner
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
