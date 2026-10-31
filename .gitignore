@@ -3,3 +3,8 @@
 *.tfstate.*
 .terraform/
 *.tfplan
+
+# Cluster credentials (terraform output -raw talosconfig/kubeconfig)
+talosconfig
+kubeconfig
+*.kubeconfig

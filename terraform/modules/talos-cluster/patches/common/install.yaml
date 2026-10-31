@@ -1,0 +1,10 @@
+# Talos >= 1.14: install settings live in the UnattendedInstallConfig document;
+# setting the legacy .machine.install alongside it is rejected.
+# ${installer_image} is filled in by Terraform (templatefile) and by CI (envsubst).
+apiVersion: v1alpha1
+kind: UnattendedInstallConfig
+installer:
+  image: ${installer_image}
+provisioning:
+  diskSelector:
+    match: disk.dev_path == "/dev/sda"

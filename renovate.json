@@ -1,0 +1,55 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "customManagers:githubActionsVersions",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "America/Toronto",
+  "minimumReleaseAge": "14 days",
+  "dependencyDashboard": true,
+  "kubernetes": {
+    "managerFilePatterns": ["/^kubernetes/.+\\.ya?ml$/"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Upstream manifests pinned by release tag in kustomization.yaml (MetalLB, Traefik CRDs, local-path-provisioner)",
+      "managerFilePatterns": ["/^kubernetes/.+/kustomization\\.yaml$/"],
+      "matchStrings": [
+        "https://raw\\.githubusercontent\\.com/(?<depName>[^/]+/[^/]+)/(?<currentValue>v[0-9][^/]*)/"
+      ],
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
+      "description": "Talos version (image, installer, talosctl in CI)",
+      "managerFilePatterns": ["/^terraform/main\\.tf$/"],
+      "matchStrings": ["talos_version\\s*=\\s*\"(?<currentValue>v[0-9][^\"]*)\""],
+      "depNameTemplate": "siderolabs/talos",
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "MetalLB also publishes metallb-chart-* tags; only follow app releases",
+      "matchPackageNames": ["metallb/metallb"],
+      "allowedVersions": "/^v\\d+\\.\\d+\\.\\d+$/"
+    },
+    {
+      "description": "Traefik CRDs/RBAC (GitHub tag) and image must move together",
+      "matchPackageNames": ["traefik/traefik", "traefik"],
+      "groupName": "traefik"
+    },
+    {
+      "description": "Talos OS upgrades are deliberate: roll nodes with talosctl upgrade, then merge",
+      "matchPackageNames": ["siderolabs/talos"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Majors need reading release notes first",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}
