@@ -19,7 +19,7 @@ data "talos_machine_configuration" "this" {
 
   # Talos >= 1.14: install settings live in the UnattendedInstallConfig
   # document; setting the legacy .machine.install alongside it is rejected.
-  config_patches = [
+  config_patches = concat([
     yamlencode({
       apiVersion = "v1alpha1"
       kind       = "UnattendedInstallConfig"
@@ -32,7 +32,19 @@ data "talos_machine_configuration" "this" {
         }
       }
     })
-  ]
+    ], each.value.role == "worker" ? [
+    # Directory for local-path-provisioner's PersistentVolumes
+    # (kubernetes/infrastructure/local-path-provisioner), created on the
+    # EPHEMERAL partition at /var/mnt/local-path-provisioner. User volumes under
+    # /var/mnt are the only host paths the kubelet sees; Talos >= 1.14 dropped
+    # .machine.kubelet.extraMounts (it conflicts with the KubeletConfig document).
+    yamlencode({
+      apiVersion = "v1alpha1"
+      kind       = "UserVolumeConfig"
+      name       = "local-path-provisioner"
+      volumeType = "directory"
+    })
+  ] : [])
 }
 
 resource "talos_machine_configuration_apply" "this" {

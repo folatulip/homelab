@@ -1,0 +1,17 @@
+# hello.10.10.20.201.sslip.io resolves to Traefik's IP via public wildcard DNS,
+# so this works before you have local DNS. Swap for e.g. hello.home.lan later.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+spec:
+  rules:
+    - host: hello.10.10.20.201.sslip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello
+                port: { number: 80 }

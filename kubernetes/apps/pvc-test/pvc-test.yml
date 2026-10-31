@@ -1,0 +1,35 @@
+# Throwaway check that storage works: writes a file to a 1Gi volume, then idles.
+# Delete with: kubectl delete -f kubernetes/apps/pvc-test/
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-test
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvc-test
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+    - name: test
+      image: busybox:1.37
+      command: ["sh", "-c", "date >> /data/log && cat /data/log && sleep 3600"]
+      volumeMounts:
+        - { name: data, mountPath: /data }
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: { drop: [ALL] }
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: pvc-test

@@ -1,0 +1,18 @@
+# Traefik ingress controller, plain manifests (no Helm).
+# Upstream CRDs + RBAC are pinned to the same release as the image in traefik.yaml.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://raw.githubusercontent.com/traefik/traefik/v3.7.15/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
+  - https://raw.githubusercontent.com/traefik/traefik/v3.7.15/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml
+  - namespace.yaml
+  - traefik.yaml
+patches:
+  # Upstream binds the ClusterRole to a ServiceAccount in "default"; ours lives in "traefik".
+  - target:
+      kind: ClusterRoleBinding
+      name: traefik-ingress-controller
+    patch: |-
+      - op: replace
+        path: /subjects/0/namespace
+        value: traefik
