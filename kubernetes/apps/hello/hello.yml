@@ -12,7 +12,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: nginx:1.27
+          image: nginx:1.29
           ports:
             - containerPort: 80
 ---
