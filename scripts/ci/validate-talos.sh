@@ -13,13 +13,15 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
 args=()
-for role in common controlplane worker; do
+# data-disk/ goes on nodes with a Longhorn disk; validate it on both roles.
+for role in common controlplane worker data-disk; do
   for f in $(find "$PATCHES/$role" -name '*.yaml' 2>/dev/null | sort); do
     envsubst '${installer_image}' < "$f" > "$work/$role-$(basename "$f")"
     case $role in
       common) args+=(--config-patch "@$work/$role-$(basename "$f")") ;;
       controlplane) args+=(--config-patch-control-plane "@$work/$role-$(basename "$f")") ;;
       worker) args+=(--config-patch-worker "@$work/$role-$(basename "$f")") ;;
+      data-disk) args+=(--config-patch "@$work/$role-$(basename "$f")") ;;
     esac
   done
 done

@@ -27,7 +27,7 @@ spec:
       labels: { app: traefik }
     spec:
       serviceAccountName: traefik-ingress-controller
-      # One replica per worker, so losing a node doesn't take ingress down.
+      # One replica per node, so losing a node doesn't take ingress down.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
@@ -81,7 +81,8 @@ metadata:
   name: traefik
   namespace: traefik
   annotations:
-    metallb.io/loadBalancerIPs: 10.10.20.201
+    # Set per cluster (postBuild.substitute in kubernetes/clusters/<cluster>/).
+    metallb.io/loadBalancerIPs: ${TRAEFIK_IP}
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local   # keeps real client IPs in access logs

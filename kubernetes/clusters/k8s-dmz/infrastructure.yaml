@@ -1,0 +1,75 @@
+# k8s-dmz add-ons: the same folders as k8s-trusted (kubernetes/infrastructure/),
+# with DMZ IPs filled in by postBuild.substitute. No Longhorn or cert-manager
+# here, and no sops decryption: this cluster doesn't get the age key, so
+# k8s-trusted's secrets stay unreadable from the DMZ.
+# wait: true = a Kustomization is only Ready once its workloads are healthy.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: metallb
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/metallb
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+# IPAddressPool/L2Advertisement are MetalLB CRDs; they need MetalLB first.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: metallb-config
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: metallb
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/metallb-config
+  prune: true
+  postBuild:
+    substitute:
+      LB_RANGE: 10.10.50.200-10.10.50.220
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+# Its LoadBalancer Service needs an IP pool to get TRAEFIK_IP.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: metallb-config
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/traefik
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      TRAEFIK_IP: 10.10.50.201
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: local-path-provisioner
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/local-path-provisioner
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

@@ -1,7 +1,7 @@
 output "clusters" {
   value = {
     trusted = module.trusted.info
-    # dmz   = module.dmz.info
+    dmz     = try(module.dmz[0].info, null)
   }
 }
 
@@ -16,15 +16,15 @@ output "trusted_kubeconfig" {
   sensitive = true
 }
 
-# output "dmz_talosconfig" {
-#   value     = module.dmz.talosconfig
-#   sensitive = true
-# }
-#
-# output "dmz_kubeconfig" {
-#   value     = module.dmz.kubeconfig
-#   sensitive = true
-# }
+output "dmz_talosconfig" {
+  value     = try(module.dmz[0].talosconfig, null)
+  sensitive = true
+}
+
+output "dmz_kubeconfig" {
+  value     = try(module.dmz[0].kubeconfig, null)
+  sensitive = true
+}
 
 # For `talosctl upgrade --image` after the extension list changes.
 output "installer_image" {

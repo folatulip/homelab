@@ -1,5 +1,6 @@
-# LAN IPs MetalLB may hand to Services of type LoadBalancer.
+# IPs MetalLB may hand to Services of type LoadBalancer.
 # Must be outside the router's DHCP range and not used by any other device.
+# LB_RANGE is set per cluster (postBuild.substitute in kubernetes/clusters/<cluster>/).
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
@@ -7,9 +8,9 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 10.10.20.200-10.10.20.220
+    - ${LB_RANGE}
 ---
-# L2 mode: the node holding an IP answers ARP for it on VLAN 20.
+# L2 mode: the node holding an IP answers ARP for it on the cluster's VLAN.
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:

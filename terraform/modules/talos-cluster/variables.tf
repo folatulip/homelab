@@ -36,6 +36,12 @@ variable "bridge" {
   default = "vmbr0"
 }
 
+variable "allow_scheduling_on_control_planes" {
+  type        = bool
+  default     = false
+  description = "Run regular pods on control plane nodes (CP + worker)."
+}
+
 variable "tags" {
   type    = list(string)
   default = []

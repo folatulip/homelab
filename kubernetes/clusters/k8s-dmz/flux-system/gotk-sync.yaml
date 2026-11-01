@@ -20,7 +20,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m0s
-  path: ./kubernetes/clusters/geese-k8s
+  path: ./kubernetes/clusters/k8s-dmz
   prune: true
   sourceRef:
     kind: GitRepository

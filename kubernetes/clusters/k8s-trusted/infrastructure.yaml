@@ -1,5 +1,6 @@
-# Cluster add-ons, applied by Flux from this repo in dependency order.
-# Each entry points at a folder under kubernetes/infrastructure/.
+# k8s-trusted add-ons, applied by Flux from this repo in dependency order.
+# Each entry points at a folder under kubernetes/infrastructure/, shared with
+# k8s-dmz. Per-cluster values (IPs) are filled in by postBuild.substitute.
 # wait: true = a Kustomization is only Ready once its Deployments/DaemonSets
 # are healthy, so dependents (dependsOn) don't start too early.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -34,6 +35,9 @@ spec:
   retryInterval: 1m
   path: ./kubernetes/infrastructure/metallb-config
   prune: true
+  postBuild:
+    substitute:
+      LB_RANGE: 10.10.20.200-10.10.20.220
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -42,7 +46,7 @@ spec:
     secretRef:
       name: sops-age
 ---
-# Its LoadBalancer Service needs an IP pool to get 10.10.20.201.
+# Its LoadBalancer Service needs an IP pool to get TRAEFIK_IP.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -55,6 +59,9 @@ spec:
   retryInterval: 1m
   path: ./kubernetes/infrastructure/traefik
   prune: true
+  postBuild:
+    substitute:
+      TRAEFIK_IP: 10.10.20.201
   wait: true
   sourceRef:
     kind: GitRepository
