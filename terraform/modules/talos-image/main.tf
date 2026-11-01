@@ -26,6 +26,12 @@ resource "proxmox_download_file" "iso" {
   datastore_id = "local"
   content_type = "iso"
   url          = data.talos_image_factory_urls.this.urls.iso
-  file_name    = "talos-${var.talos_version}-nocloud-amd64.iso"
-  overwrite    = false
+  # Schematic id in the name: a new extension list gets a new file, so the
+  # VMs switch to it before the old ISO is deleted.
+  file_name = "talos-${var.talos_version}-${substr(talos_image_factory_schematic.this.id, 0, 8)}-nocloud-amd64.iso"
+  overwrite = false
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }

@@ -1,0 +1,26 @@
+# Group "default" = every volume that isn't assigned other jobs, so new PVCs
+# are backed up with no extra config. Cron runs in UTC: 08:00 UTC is
+# 3 AM EST / 4 AM EDT. Each backup is incremental (only changed blocks).
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: backup-daily
+  namespace: longhorn-system
+spec:
+  task: backup
+  cron: "0 8 * * *"
+  retain: 7
+  concurrency: 1
+  groups: [default]
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: backup-weekly
+  namespace: longhorn-system
+spec:
+  task: backup
+  cron: "0 9 * * 0" # Sundays
+  retain: 4
+  concurrency: 1
+  groups: [default]

@@ -1,0 +1,12 @@
+# Longhorn: replicated block storage. Each volume keeps a copy on both workers,
+# so a pod can move to the other node if one goes down. Backups go to the NAS
+# (longhorn-config/).
+#
+# Talos side (terraform/): the image has the iscsi-tools + util-linux-tools
+# extensions, and each worker has a second disk mounted at /var/mnt/longhorn.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - helmrepository.yaml
+  - helmrelease.yaml

@@ -12,6 +12,9 @@
   "kubernetes": {
     "managerFilePatterns": ["/^kubernetes/.+\\.ya?ml$/"]
   },
+  "flux": {
+    "managerFilePatterns": ["/^kubernetes/.+\\.ya?ml$/"]
+  },
   "customManagers": [
     {
       "customType": "regex",
@@ -54,6 +57,12 @@
     {
       "description": "Talos OS upgrades are deliberate: roll nodes with talosctl upgrade, then merge",
       "matchPackageNames": ["siderolabs/talos"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Longhorn upgrades one minor at a time; read the upgrade notes and check backups first",
+      "matchPackageNames": ["longhorn"],
+      "matchUpdateTypes": ["minor"],
       "dependencyDashboardApproval": true
     },
     {

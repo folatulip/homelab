@@ -61,6 +61,8 @@ variable "nodes" {
     memory       = optional(number, 4096)
     cores        = optional(number, 2)
     disk_size    = optional(number, 20)
+    # Second disk (scsi1 = /dev/sdb) for Longhorn, in GB. 0 = none.
+    data_disk_size = optional(number, 0)
   }))
 
   validation {

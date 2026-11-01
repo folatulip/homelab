@@ -1,0 +1,12 @@
+# Longhorn's data disk: the second VM disk (scsi1, data_disk_size in
+# terraform/main.tf), formatted XFS and mounted at /var/mnt/longhorn.
+# Longhorn's defaultDataPath points here (kubernetes/infrastructure/longhorn).
+# grow: true = resizing the disk in Terraform grows the volume too.
+apiVersion: v1alpha1
+kind: UserVolumeConfig
+name: longhorn
+provisioning:
+  diskSelector:
+    match: disk.dev_path == "/dev/sdb"
+  minSize: 10GiB
+  grow: true

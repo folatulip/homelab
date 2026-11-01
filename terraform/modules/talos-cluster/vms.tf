@@ -43,6 +43,21 @@ resource "proxmox_virtual_environment_vm" "this" {
     ssd          = true
   }
 
+  # Longhorn data disk. Talos formats it and mounts it at /var/mnt/longhorn
+  # (patches/worker/longhorn-volume.yaml).
+  dynamic "disk" {
+    for_each = each.value.data_disk_size > 0 ? [each.value.data_disk_size] : []
+    content {
+      datastore_id = "local-lvm"
+      interface    = "scsi1"
+      size         = disk.value
+      file_format  = "raw"
+      iothread     = true
+      discard      = "on"
+      ssd          = true
+    }
+  }
+
   cdrom {
     file_id   = var.iso_ids[each.value.proxmox_node]
     interface = "ide0"
