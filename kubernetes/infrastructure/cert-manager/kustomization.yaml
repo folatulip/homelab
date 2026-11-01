@@ -5,14 +5,20 @@ kind: Kustomization
 resources:
   - https://github.com/cert-manager/cert-manager/releases/download/v1.21.2/cert-manager.yaml
 patches:
-  # DNS-01 self-check: find the zone's nameservers via public resolvers (not
-  # the LAN gateway, which answers for *.lab.felixlatulip.ca itself), then ask
-  # Cloudflare's authoritative servers directly. Asking 1.1.1.1 for the TXT
-  # record ("-only" mode) caches the not-found answer for 30 min.
+  # DNS-01 self-check over DNS-over-HTTPS. The UniFi gateway intercepts all
+  # port-53 traffic (whatever server it's addressed to) and answers
+  # *.lab.felixlatulip.ca from its local wildcard record, which hides
+  # _acme-challenge.lab. DoH to Cloudflare's resolver goes around it.
+  # "-only": ask the resolver for the TXT record too, instead of querying the
+  # authoritative servers on port 53 (intercepted as well). Drawback: a
+  # not-found answer cached by 1.1.1.1 can delay issuance by up to ~30 min.
   - target:
       kind: Deployment
       name: cert-manager
     patch: |-
       - op: add
         path: /spec/template/spec/containers/0/args/-
-        value: --dns01-recursive-nameservers=1.1.1.1:53,1.0.0.1:53
+        value: --dns01-recursive-nameservers=https://1.1.1.1/dns-query,https://1.0.0.1/dns-query
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --dns01-recursive-nameservers-only
