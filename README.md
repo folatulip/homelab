@@ -145,7 +145,7 @@ Both clusters use the same folders under `kubernetes/infrastructure/`. Values th
 
 ## Certificates
 
-k8s-trusted is LAN-only, but its certs are real Let's Encrypt ones, trusted by every device with no setup. cert-manager gets them with a **DNS-01** challenge: it proves ownership of `felixlatulip.ca` by writing a TXT record through the Cloudflare API, so nothing has to be reachable from the internet.
+k8s-trusted is LAN-only, but its certs are real Let's Encrypt ones, trusted by every device with no setup. cert-manager gets them with a **DNS-01** challenge: it proves ownership of `felixlatulip.ca` by writing a TXT record through the Cloudflare API, so nothing has to be reachable from the internet. Its self-check that the TXT record is live goes over DNS-over-HTTPS to 1.1.1.1. The UniFi gateway intercepts every port-53 query and answers `*.lab` from its local record, which would hide the challenge.
 
 - **One wildcard cert** for `*.lab.felixlatulip.ca`, Traefik's default certificate. It's in `infrastructure/cert-manager-config/wildcard.yaml`. Any Ingress host under `lab.felixlatulip.ca` gets valid HTTPS on 443 without a `tls` section. App names stay out of public Certificate Transparency logs; only the wildcard appears there.
 - **Issuers:** `letsencrypt-prod` for real certs, and `letsencrypt-staging` for testing changes (untrusted certs, higher rate limits).
