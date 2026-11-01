@@ -3,7 +3,8 @@
   "extends": [
     "config:recommended",
     "customManagers:githubActionsVersions",
-    "helpers:pinGitHubActionDigests"
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits"
   ],
   "timezone": "America/Toronto",
   "minimumReleaseAge": "14 days",

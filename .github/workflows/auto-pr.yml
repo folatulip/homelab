@@ -1,0 +1,41 @@
+# Opens a PR into main whenever a branch is pushed and doesn't have one yet.
+# Title and description come from the branch's first commit.
+name: Auto PR
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - 'renovate/**' # Renovate opens its own PRs
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: auto-pr-${{ github.ref }}
+
+jobs:
+  open-pr:
+    name: Open PR
+    runs-on: ubuntu-24.04
+    if: ${{ !github.event.deleted }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Create PR if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ "$(git rev-list --count origin/main..HEAD)" -eq 0 ]; then
+            echo "No commits ahead of main, nothing to open."
+            exit 0
+          fi
+          existing=$(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url')
+          if [ -n "$existing" ]; then
+            echo "PR already open: $existing"
+            exit 0
+          fi
+          gh pr create --base main --head "$BRANCH" --fill-first
