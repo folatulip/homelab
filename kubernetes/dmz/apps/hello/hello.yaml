@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: hello }
+  template:
+    metadata:
+      labels: { app: hello }
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.29
+          ports:
+            - containerPort: 80
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello
+spec:
+  selector: { app: hello }
+  ports:
+    - port: 80
+      targetPort: 80
+---
+# Cloudflare terminates HTTPS; the tunnel reaches Traefik over plain HTTP
+# inside the cluster, so this only needs the web entrypoint.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+spec:
+  rules:
+    - host: hello.felixlatulip.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hello
+                port: { number: 80 }

@@ -50,7 +50,7 @@ kubernetes/
       flux-system/         Flux itself (written by flux bootstrap)
       infrastructure.yaml  which add-ons to apply, in what order, with this cluster's IPs
       apps.yaml            applies kubernetes/apps/ after ingress + storage are ready
-    k8s-dmz/               Flux entry point for k8s-dmz (base add-ons only, no apps yet)
+    k8s-dmz/               Flux entry point for k8s-dmz
   infrastructure/          add-ons, shared by both clusters
     metallb/               load balancer controller
     metallb-config/        IP pool, set per cluster (L2 mode)
@@ -60,6 +60,9 @@ kubernetes/
     longhorn-config/       backup schedule to the NAS, trusted only
     cert-manager/          issues TLS certificates, trusted only
     cert-manager-config/   Let's Encrypt issuers, Cloudflare token, *.lab wildcard cert
+  dmz/                     k8s-dmz only (secrets use the DMZ age key)
+    cloudflared/           Cloudflare Tunnel connector
+    apps/                  public apps (hello = tunnel test page)
   apps/                    k8s-trusted apps
     kustomization.yaml     list of apps Flux deploys
     hello/                 example app
@@ -158,6 +161,23 @@ k8s-trusted is LAN-only, but its certs are real Let's Encrypt ones, trusted by e
 
 Until then, the `sslip.io` hostnames work over plain HTTP.
 
+## Public apps (k8s-dmz)
+
+Public apps run on k8s-dmz and are reached only through a **Cloudflare Tunnel**: cloudflared (2 replicas, `kubernetes/dmz/cloudflared/`) opens outbound connections to Cloudflare, so no router ports are open. Cloudflare terminates HTTPS and forwards to the DMZ Traefik, which routes by hostname.
+
+The tunnel `k8s-dmz` is managed in the Cloudflare Zero Trust dashboard (Networks → Tunnels). To publish an app:
+
+1. Add it under `kubernetes/dmz/apps/<name>/` with an Ingress for `<name>.felixlatulip.ca`, and list it in `kubernetes/dmz/apps/kustomization.yaml`. No `tls` section.
+2. In the tunnel's public hostnames, add `<name>.felixlatulip.ca` → `HTTP` → `traefik.traefik.svc.cluster.local`. Cloudflare creates the DNS record.
+
+The tunnel token is in `dmz/cloudflared/tunnel-token.sops.yaml`. To rotate it, refresh the token in the dashboard, copy it, and re-create the file:
+
+```sh
+kubectl create secret generic tunnel-token -n cloudflared --from-literal=token="$(pbpaste)" \
+  --dry-run=client -o yaml > kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
+sops -e -i kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
+```
+
 ## Secrets
 
 Secrets (k8s-trusted only) are committed encrypted with [sops](https://github.com/getsops/sops) + [age](https://age-encryption.org), and Flux decrypts them in the cluster. Any file named `*.sops.yaml` under `kubernetes/` is encrypted with the public key in `.sops.yaml`. Only `data`/`stringData` values get encrypted, so names and keys stay readable.
@@ -170,7 +190,13 @@ sops -d kubernetes/apps/<app>/secret.sops.yaml      # print decrypted
 
 Then list the file in the app's `kustomization.yaml` like any other manifest. `hello/secret.sops.yaml` is an example. CI fails if a `*.sops.yaml` file is committed unencrypted.
 
-k8s-dmz doesn't get the age key and its Kustomizations have no decryption, so a compromised DMZ cluster can't read trusted secrets. It will get its own key when it needs secrets.
+k8s-dmz has its **own age key**. `.sops.yaml` encrypts files under `kubernetes/dmz/` to it, and only that key is in k8s-dmz's `sops-age` Secret, so a compromised DMZ cluster can't read trusted secrets. Both private keys are in the same `keys.txt` on the Mac (keep both in the password manager). To recreate k8s-dmz's Secret, put only the DMZ key in it (the one under the `# k8s-dmz` comment):
+
+```sh
+grep -A2 '# k8s-dmz' "$HOME/Library/Application Support/sops/age/keys.txt" | grep AGE-SECRET-KEY > /tmp/dmz.agekey
+kubectl --context admin@k8s-dmz -n flux-system create secret generic sops-age --from-file=age.agekey=/tmp/dmz.agekey
+rm /tmp/dmz.agekey
+```
 
 **The private key** is in `~/Library/Application Support/sops/age/keys.txt` on the Mac, and in the cluster as Secret `flux-system/sops-age`. It isn't in git. Keep a copy in a password manager. Without it, nothing encrypted can be decrypted. After rebuilding the cluster, recreate the Secret before Flux syncs:
 
