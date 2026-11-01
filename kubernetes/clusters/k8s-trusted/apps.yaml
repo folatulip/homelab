@@ -11,6 +11,7 @@ spec:
     - name: traefik
     - name: local-path-provisioner
     - name: longhorn
+    - name: longhorn-config # storage classes (longhorn-retain)
   interval: 10m
   retryInterval: 1m
   path: ./kubernetes/apps
