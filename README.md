@@ -73,6 +73,25 @@ Deleting a file from git deletes its objects from the cluster, because every Flu
 - A volume is tied to the node it was created on. If that node is down, pods using it can't start elsewhere.
 - Volumes share the ~19 GB EPHEMERAL partition with container images and logs.
 
+## Secrets
+
+Secrets are committed encrypted with [sops](https://github.com/getsops/sops) + [age](https://age-encryption.org), and Flux decrypts them in the cluster. Any file named `*.sops.yaml` under `kubernetes/` is encrypted with the public key in `.sops.yaml`. Only `data`/`stringData` values get encrypted, so names and keys stay readable.
+
+```sh
+sops -e -i kubernetes/apps/<app>/secret.sops.yaml   # encrypt a new Secret before committing
+sops kubernetes/apps/<app>/secret.sops.yaml         # edit in $EDITOR (decrypts, re-encrypts on save)
+sops -d kubernetes/apps/<app>/secret.sops.yaml      # print decrypted
+```
+
+Then list the file in the app's `kustomization.yaml` like any other manifest. `hello/secret.sops.yaml` is an example. CI fails if a `*.sops.yaml` file is committed unencrypted.
+
+**The private key** is in `~/Library/Application Support/sops/age/keys.txt` on the Mac, and in the cluster as Secret `flux-system/sops-age`. It isn't in git. Keep a copy in a password manager. Without it, nothing encrypted can be decrypted. After rebuilding the cluster, recreate the Secret before Flux syncs:
+
+```sh
+kubectl -n flux-system create secret generic sops-age \
+  --from-file=age.agekey="$HOME/Library/Application Support/sops/age/keys.txt"
+```
+
 ## Talos 1.14 notes
 
 - Kubelet settings live in the `KubeletConfig` document. Patching `.machine.kubelet` fails with `kubelet config is already set in v1alpha1 config`, and `extraMounts` no longer exists. Host paths for pods go under `/var/mnt` as user volumes.

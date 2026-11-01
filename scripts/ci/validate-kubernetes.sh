@@ -14,11 +14,23 @@ kubeconform_args=(-strict -summary -skip CustomResourceDefinition -schema-locati
 
 status=0
 
+# sops-encrypted Secrets carry a top-level `sops:` metadata block that strict
+# schemas reject. Flux removes it when decrypting, so drop it before validating.
+strip_sops() { awk '/^sops:/{skip=1; next} skip && /^([^ ]|---)/{skip=0} !skip'; }
+
+# Every *.sops.yaml must actually be encrypted (catches a forgotten `sops -e`).
+while IFS= read -r f; do
+  if ! grep -q '^sops:' "$f" || ! grep -q '^    mac: ENC\[' "$f"; then
+    echo "::error file=$f::$f is not sops-encrypted (run: sops -e -i $f)"
+    status=1
+  fi
+done < <(find kubernetes -name '*.sops.yaml' -o -name '*.sops.yml' | sort)
+
 # Folders with a kustomization.yaml: render, then validate.
 while IFS= read -r k; do
   dir=$(dirname "$k")
   echo "::group::kustomize $dir"
-  if ! kubectl kustomize "$dir" | kubeconform "${kubeconform_args[@]}" -; then
+  if ! kubectl kustomize "$dir" | strip_sops | kubeconform "${kubeconform_args[@]}" -; then
     echo "::error file=$k::$dir failed validation"
     status=1
   fi

@@ -81,7 +81,6 @@ metadata:
   name: traefik
   namespace: traefik
   annotations:
-    # Fixed IP so DNS records for your apps can point at it.
     metallb.io/loadBalancerIPs: 10.10.20.201
 spec:
   type: LoadBalancer
