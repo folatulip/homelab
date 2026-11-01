@@ -1,0 +1,26 @@
+# One wildcard cert for every LAN app, used by Traefik as its default
+# certificate. Apps under *.lab.felixlatulip.ca get valid HTTPS with no tls
+# section, and individual app names never show up in public CT logs.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: lab-wildcard
+  namespace: traefik
+spec:
+  secretName: lab-wildcard-tls
+  dnsNames:
+    - lab.felixlatulip.ca
+    - "*.lab.felixlatulip.ca"
+  issuerRef:
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+    group: cert-manager.io
+---
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: traefik
+spec:
+  defaultCertificate:
+    secretName: lab-wildcard-tls

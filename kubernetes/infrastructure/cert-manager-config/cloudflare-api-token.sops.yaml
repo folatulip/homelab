@@ -1,0 +1,25 @@
+# Cloudflare API token for DNS-01. Permissions: Zone:DNS:Edit + Zone:Zone:Read,
+# zone felixlatulip.ca only. Edit with: sops <this file>
+apiVersion: v1
+kind: Secret
+metadata:
+    name: cloudflare-api-token
+    namespace: cert-manager
+type: Opaque
+stringData:
+    api-token: ENC[AES256_GCM,data:0ibcVwTGQ18XqUtuzyVJH0aJLubkB070ouH8Tjjtdvs3djtADdJyL/tKi5bzb2x9pIBPEG0=,iv:sTF6q30Ihc8xQj5CxPWgKREvBnblocUIj0ZRQdyeRiM=,tag:e7DVDHQ4zOlC7nKx2R1SMA==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBaOGR1R1ptdVJ3RnBCMHpF
+            R3dVbzd5WHUrbEZxbk9CUWcwZmxsT2lGZ0VZCmJINzNsYVAwTGZFVDhBSDBtMWI4
+            RWgvS1dQRkxXRWgrZE5ST3NlcVBzdXcKLS0tIEprU0FsZjhYWkpmWVZWUm1HSXVE
+            WndMUE9zZWEwZjRGRWlMVzcrakZaZDgKP1G0Lua6lOhc1O+bUQpHCmgwGcBKg027
+            ztmabtrAYv7YCsb4qhTZans+JBk+OOr+41p7EAqm5WfIn3RAf0gOuQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age1wk2s9zgyml8408m4cr6gjlmuke4rj3gpe5szpwm4x20xnr06l53qcn8vyh
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-01T05:50:08Z"
+    mac: ENC[AES256_GCM,data:H0WA71DIvPpLSU3J2r5Zq8aCwUqGhXkoMdORxG/S+afQkxe+WkbMTGVaTY++IHIyUW4MWdKiHSaO4sspOqcvq4ycI36httviVYwSUZqv6mUW8o1MYzuRmKupH+4znkaXf9fPy430+hNu7UEgru6yd5gefXfEhoKLMGRMBcl5q8c=,iv:H3HOXdlP13mHT19zhISlH1SR6K2FleY5D7qtlo7wIgY=,tag:5yHcMnJatXtGR5Qu7Usw5w==,type:str]
+    version: 3.13.3

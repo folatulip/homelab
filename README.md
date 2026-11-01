@@ -35,6 +35,8 @@ kubernetes/
     metallb-config/        IP pool 10.10.20.200-220 (L2 mode)
     traefik/               ingress controller, fixed IP 10.10.20.201
     local-path-provisioner/ default StorageClass "local-path"
+    cert-manager/          issues TLS certificates
+    cert-manager-config/   Let's Encrypt issuers, Cloudflare token, *.lab wildcard cert
   apps/
     kustomization.yaml     list of apps Flux deploys
     hello/                 example app
@@ -94,8 +96,8 @@ Deleting a file from git deletes its objects from the cluster, because every Flu
 ## Networking
 
 - **LoadBalancer IPs:** MetalLB hands out `10.10.20.200`–`10.10.20.220` on VLAN 20.
-- **Ingress:** Traefik is at `10.10.20.201`, on ports 80 and 443. Port 443 uses a self-signed certificate until cert-manager is set up.
-- **Hostnames:** use `<app>.10.10.20.201.sslip.io` until local DNS exists, e.g. http://hello.10.10.20.201.sslip.io.
+- **Ingress:** Traefik is at `10.10.20.201`, on ports 80 and 443. On 443 it serves the `*.lab.felixlatulip.ca` wildcard cert (see [Certificates](#certificates)).
+- **Hostnames:** `<app>.lab.felixlatulip.ca`, e.g. https://hello.lab.felixlatulip.ca. Until DNS points there, use `<app>.10.10.20.201.sslip.io` over HTTP.
 - **Traefik dashboard:** `kubectl -n traefik port-forward deploy/traefik 8080`, then http://localhost:8080/dashboard/
 
 ## Storage
@@ -104,6 +106,21 @@ Deleting a file from git deletes its objects from the cluster, because every Flu
 
 - A volume is tied to the node it was created on. If that node is down, pods using it can't start elsewhere.
 - Volumes share the ~19 GB EPHEMERAL partition with container images and logs.
+
+## Certificates
+
+This cluster is LAN-only, but its certs are real Let's Encrypt ones, trusted by every device with no setup. cert-manager gets them with a **DNS-01** challenge: it proves ownership of `felixlatulip.ca` by writing a TXT record through the Cloudflare API, so nothing has to be reachable from the internet.
+
+- **One wildcard cert** for `*.lab.felixlatulip.ca`, Traefik's default certificate. It's in `infrastructure/cert-manager-config/wildcard.yaml`. Any Ingress host under `lab.felixlatulip.ca` gets valid HTTPS on 443 without a `tls` section. App names stay out of public Certificate Transparency logs; only the wildcard appears there.
+- **Issuers:** `letsencrypt-prod` for real certs, and `letsencrypt-staging` for testing changes (untrusted certs, higher rate limits).
+- **Renewal** is automatic, about 30 days before the 90-day expiry. Check status with `kubectl get certificates -A`.
+- **Cloudflare token** lives in `cert-manager-config/cloudflare-api-token.sops.yaml`. It's scoped to Zone:DNS:Edit and Zone:Zone:Read on `felixlatulip.ca` only. Rotate it with `sops <file>`.
+
+**DNS for app names.** Point `*.lab.felixlatulip.ca` at Traefik (`10.10.20.201`) in one of two ways:
+- a local DNS record on the UniFi gateway: LAN-only, preferred
+- a DNS-only (grey cloud) record in Cloudflare: works everywhere, but publishes the private IP
+
+Until then, the `sslip.io` hostnames work over plain HTTP.
 
 ## Secrets
 

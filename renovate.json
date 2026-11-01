@@ -24,6 +24,15 @@
     },
     {
       "customType": "regex",
+      "description": "Upstream manifests pinned as GitHub release assets in kustomization.yaml (cert-manager)",
+      "managerFilePatterns": ["/^kubernetes/.+/kustomization\\.yaml$/"],
+      "matchStrings": [
+        "https://github\\.com/(?<depName>[^/]+/[^/]+)/releases/download/(?<currentValue>v[0-9][^/]*)/"
+      ],
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "customType": "regex",
       "description": "Talos version (image, installer, talosctl in CI)",
       "managerFilePatterns": ["/^terraform/main\\.tf$/"],
       "matchStrings": ["talos_version\\s*=\\s*\"(?<currentValue>v[0-9][^\"]*)\""],
