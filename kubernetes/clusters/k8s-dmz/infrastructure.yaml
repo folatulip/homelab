@@ -1,7 +1,7 @@
 # k8s-dmz add-ons: the same folders as k8s-trusted (kubernetes/infrastructure/),
-# with DMZ IPs filled in by postBuild.substitute. No Longhorn or cert-manager
-# here, and no sops decryption: this cluster doesn't get the age key, so
-# k8s-trusted's secrets stay unreadable from the DMZ.
+# with DMZ IPs filled in by postBuild.substitute, plus DMZ-only folders under
+# kubernetes/dmz/. No Longhorn or cert-manager. Secrets use a separate DMZ age
+# key, so k8s-trusted's secrets stay unreadable from here.
 # wait: true = a Kustomization is only Ready once its workloads are healthy.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -73,3 +73,26 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+---
+# Cloudflare Tunnel connector. Its token is encrypted with the DMZ age key
+# (Secret flux-system/sops-age on this cluster only).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cloudflared
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: traefik
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/dmz/cloudflared
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
