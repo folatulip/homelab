@@ -5,15 +5,14 @@ kind: Kustomization
 resources:
   - https://github.com/cert-manager/cert-manager/releases/download/v1.21.2/cert-manager.yaml
 patches:
-  # Check DNS-01 TXT records against Cloudflare's public resolvers, not the LAN
-  # resolver (the gateway may answer for lab.felixlatulip.ca itself).
+  # DNS-01 self-check: find the zone's nameservers via public resolvers (not
+  # the LAN gateway, which answers for *.lab.felixlatulip.ca itself), then ask
+  # Cloudflare's authoritative servers directly. Asking 1.1.1.1 for the TXT
+  # record ("-only" mode) caches the not-found answer for 30 min.
   - target:
       kind: Deployment
       name: cert-manager
     patch: |-
-      - op: add
-        path: /spec/template/spec/containers/0/args/-
-        value: --dns01-recursive-nameservers-only
       - op: add
         path: /spec/template/spec/containers/0/args/-
         value: --dns01-recursive-nameservers=1.1.1.1:53,1.0.0.1:53
