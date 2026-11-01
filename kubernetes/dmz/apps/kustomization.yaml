@@ -1,0 +1,8 @@
+# Public apps on k8s-dmz. Folders not listed here are ignored.
+# To publish one: add an Ingress with host <app>.felixlatulip.ca, then add the
+# same public hostname to the tunnel in Cloudflare Zero Trust, pointing to
+# http://traefik.traefik.svc.cluster.local.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - hello
