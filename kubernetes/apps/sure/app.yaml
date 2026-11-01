@@ -1,0 +1,101 @@
+# Sure: Rails web + Sidekiq worker. One pod with both containers, because
+# both need the uploads volume and a Longhorn RWO volume attaches to a
+# single node. replicas: 0 until the data is restored (README, "Sure").
+# Never run 2 replicas: Recreate makes sure the old pod is gone first.
+# Image pinned to the exact build the old LXC ran (tag 0.7.2 = digest below).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sure
+spec:
+  replicas: 0
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: sure }
+  template:
+    metadata:
+      labels: { app: sure }
+    spec:
+      securityContext:
+        runAsUser: 1000 # rails user in the image
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web
+          image: ghcr.io/we-promise/sure:0.7.2@sha256:96155b20c0b71f8e2ab960ab5aba8fba9df64c6a40ec581eca20af2b20ab089c
+          envFrom: &env
+            - secretRef: { name: sure-env }
+            - configMapRef: { name: sure-config }
+          ports:
+            - containerPort: 3000
+          startupProbe: # first boot runs db:prepare (migrations)
+            tcpSocket: { port: 3000 }
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket: { port: 3000 }
+            periodSeconds: 10
+          securityContext: &sc
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 1536Mi }
+          volumeMounts: &mounts
+            - name: storage
+              mountPath: /rails/storage
+        - name: worker
+          image: ghcr.io/we-promise/sure:0.7.2@sha256:96155b20c0b71f8e2ab960ab5aba8fba9df64c6a40ec581eca20af2b20ab089c
+          args: ["bundle", "exec", "sidekiq"]
+          envFrom: *env
+          securityContext: *sc
+          resources:
+            requests: { cpu: 50m, memory: 384Mi }
+            limits: { memory: 1536Mi }
+          volumeMounts: *mounts
+      volumes:
+        - name: storage
+          persistentVolumeClaim: { claimName: sure-storage }
+---
+# Non-secret settings, same as the old compose file.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sure-config
+data:
+  SELF_HOSTED: "true"
+  RAILS_FORCE_SSL: "false"
+  RAILS_ASSUME_SSL: "false"
+  DB_HOST: sure-db
+  DB_PORT: "5432"
+  REDIS_URL: redis://sure-redis:6379/1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sure
+spec:
+  selector: { app: sure }
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+# LAN only: *.lab resolves to Traefik through the UniFi wildcard record and
+# uses Traefik's default wildcard cert.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sure
+spec:
+  rules:
+    - host: sure.lab.felixlatulip.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sure
+                port: { number: 80 }

@@ -57,7 +57,7 @@ kubernetes/
     traefik/               ingress controller, fixed IP set per cluster
     local-path-provisioner/ StorageClass "local-path" (node-local scratch)
     longhorn/              default StorageClass "longhorn" (replicated), trusted only
-    longhorn-config/       backup schedule to the NAS, trusted only
+    longhorn-config/       backup schedule to the NAS, "longhorn-retain" class, trusted only
     cert-manager/          issues TLS certificates, trusted only
     cert-manager-config/   Let's Encrypt issuers, Cloudflare token, *.lab wildcard cert
   dmz/                     k8s-dmz only (secrets use the DMZ age key)
@@ -66,6 +66,7 @@ kubernetes/
   apps/                    k8s-trusted apps
     kustomization.yaml     list of apps Flux deploys
     hello/                 example app
+    sure/                  Sure (personal finance), https://sure.lab.felixlatulip.ca
     pvc-test/              throwaway storage check (not deployed by Flux)
 ```
 
@@ -144,6 +145,8 @@ Both clusters use the same folders under `kubernetes/infrastructure/`. Values th
 
 **Backups** go to the Unraid NAS over NFS: `nfs://10.10.20.3:/mnt/user/longhorn`. Every volume is backed up daily (7 kept) and weekly on Sundays (4 kept), from `longhorn-config/recurring-jobs.yaml`. Backups are incremental and survive deleting the volume or the whole cluster. To restore: Longhorn UI → Backup → pick a backup → Restore, then point a PVC at the restored volume.
 
+**`longhorn-retain`** is the same, but deleting the PVC keeps the volume (it shows as Released in the Longhorn UI). Use it for data that can't be rebuilt from git, and add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation so Flux never deletes the PVC either. To reattach a released volume: Longhorn UI → Volume → Create PV/PVC.
+
 **`local-path`** is there for scratch data on k8s-trusted, and is the only storage on k8s-dmz: set `storageClassName: local-path`. Its volumes are directories under `/var/mnt/local-path-provisioner` on one node's system disk, aren't replicated or backed up, and share the ~19 GB EPHEMERAL partition with images and logs.
 
 ## Certificates
@@ -177,6 +180,52 @@ kubectl create secret generic tunnel-token -n cloudflared --from-literal=token="
   --dry-run=client -o yaml > kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
 sops -e -i kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
 ```
+
+## Sure
+
+[Sure](https://github.com/we-promise/sure) (personal finance) runs in namespace `sure` on k8s-trusted, LAN only: https://sure.lab.felixlatulip.ca. It came from LXC 105 on goose (Docker Compose) on 2026-11-01.
+
+- **Pods:** `sure` (Rails web + Sidekiq worker in one pod, since both need the uploads volume), `sure-db` (postgres:16.14), `sure-redis` (redis:8.8.0).
+- **Data:** PVCs `sure-db`, `sure-storage` (uploads) and `sure-redis` are on `longhorn-retain` and never pruned by Flux.
+- **Secrets:** `secret.sops.yaml` holds the Postgres login, `SECRET_KEY_BASE` and the three `ACTIVE_RECORD_ENCRYPTION_*` keys. **Those keys encrypt fields in the database: if they're lost or changed, that data can't be read.** Keep a copy in your password manager.
+- **Backups**, three layers:
+  1. `sure-db-dump` CronJob: `pg_dump` every night at 07:00 UTC into the `sure-db-dumps` PVC, 14 days kept. Each dump is test-read before it's kept.
+  2. Longhorn backs up every sure volume (dumps included) to the NAS daily at 08:00 UTC.
+  3. The pre-migration copy on the NAS: `data/sure-migration-20261101/` (vzdump of LXC 105, Postgres dumps, row counts).
+- **Upgrading:** change the image tag and digest in `app.yaml` (both containers). Take a manual dump first: `kubectl -n sure create job --from=cronjob/sure-db-dump pre-upgrade`. The app runs its migrations on start. Postgres stays on 16.x: a major version needs a dump and restore.
+
+Restore the database from a nightly dump:
+
+1. Set `replicas: 0` in `app.yaml`, push, and wait for the `sure` pod to stop.
+2. Start a pod that has the dumps and the DB login, then restore into it:
+
+   ```sh
+   kubectl -n sure apply -f - <<'EOF'
+   apiVersion: v1
+   kind: Pod
+   metadata: { name: restore }
+   spec:
+     securityContext: { runAsUser: 999, runAsGroup: 999, runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
+     containers:
+       - name: pg
+         image: postgres:16.14
+         command: ["sleep", "infinity"]
+         env:
+           - { name: PGHOST, value: sure-db }
+           - { name: PGUSER, valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_USER } } }
+           - { name: PGPASSWORD, valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_PASSWORD } } }
+           - { name: PGDATABASE, valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_DB } } }
+         securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] } }
+         volumeMounts: [{ name: dumps, mountPath: /dumps }]
+     volumes: [{ name: dumps, persistentVolumeClaim: { claimName: sure-db-dumps } }]
+   EOF
+   kubectl -n sure exec restore -- ls -lh /dumps
+   kubectl -n sure exec restore -- pg_restore --clean --if-exists --exit-on-error -d sure_production /dumps/<file>.dump
+   kubectl -n sure delete pod restore
+   ```
+
+   The dumps volume attaches to one node at a time, so the restore fails if the nightly job is running at the same moment.
+3. Set `replicas: 1` again and push.
 
 ## Secrets
 

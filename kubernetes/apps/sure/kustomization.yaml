@@ -1,0 +1,13 @@
+# Sure (personal finance), moved from LXC 105 on goose. LAN only:
+# https://sure.lab.felixlatulip.ca
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sure
+resources:
+  - namespace.yaml
+  - secret.sops.yaml
+  - pvcs.yaml
+  - db.yaml
+  - redis.yaml
+  - app.yaml
+  - db-backup.yaml

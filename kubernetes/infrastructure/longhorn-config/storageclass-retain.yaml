@@ -1,0 +1,16 @@
+# Like the default "longhorn" class, but deleting the PVC keeps the Longhorn
+# volume (Released), so data survives a mistaken delete or a Flux prune.
+# Use it for anything that can't be rebuilt from git. Reattach a released
+# volume from the Longhorn UI (Volume -> Create PV/PVC).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-retain
+provisioner: driver.longhorn.io
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "2" # one copy per node
+  staleReplicaTimeout: "30"
+  fsType: ext4

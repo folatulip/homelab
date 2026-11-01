@@ -1,0 +1,49 @@
+# Sidekiq's queue. Same version as the old LXC (redis:8.8.0).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sure-redis
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: sure-redis }
+  template:
+    metadata:
+      labels: { app: sure-redis }
+    spec:
+      securityContext:
+        runAsUser: 999 # redis user in the image
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: redis
+          image: redis:8.8.0
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec: { command: ["redis-cli", "ping"] }
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: sure-redis }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sure-redis
+spec:
+  selector: { app: sure-redis }
+  ports:
+    - port: 6379
