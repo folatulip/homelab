@@ -1,6 +1,6 @@
 # Sure: Rails web + Sidekiq worker. One pod with both containers, because
 # both need the uploads volume and a Longhorn RWO volume attaches to a
-# single node. replicas: 0 until the data is restored (README, "Sure").
+# single node. Data restored from LXC 105 and verified on 2026-11-01.
 # Never run 2 replicas: Recreate makes sure the old pod is gone first.
 # Image pinned to the exact build the old LXC ran (tag 0.7.2 = digest below).
 apiVersion: apps/v1
@@ -8,7 +8,7 @@ kind: Deployment
 metadata:
   name: sure
 spec:
-  replicas: 0
+  replicas: 1
   strategy: { type: Recreate }
   selector:
     matchLabels: { app: sure }
