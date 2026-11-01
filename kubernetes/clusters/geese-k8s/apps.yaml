@@ -10,6 +10,7 @@ spec:
   dependsOn:
     - name: traefik
     - name: local-path-provisioner
+    - name: longhorn
   interval: 10m
   retryInterval: 1m
   path: ./kubernetes/apps

@@ -25,3 +25,8 @@ output "trusted_kubeconfig" {
 #   value     = module.dmz.kubeconfig
 #   sensitive = true
 # }
+
+# For `talosctl upgrade --image` after the extension list changes.
+output "installer_image" {
+  value = module.talos_image.installer_image
+}

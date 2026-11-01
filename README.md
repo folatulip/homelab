@@ -34,7 +34,9 @@ kubernetes/
     metallb/               load balancer controller
     metallb-config/        IP pool 10.10.20.200-220 (L2 mode)
     traefik/               ingress controller, fixed IP 10.10.20.201
-    local-path-provisioner/ default StorageClass "local-path"
+    local-path-provisioner/ StorageClass "local-path" (node-local scratch)
+    longhorn/              default StorageClass "longhorn" (replicated)
+    longhorn-config/       backup schedule to the NAS
     cert-manager/          issues TLS certificates
     cert-manager-config/   Let's Encrypt issuers, Cloudflare token, *.lab wildcard cert
   apps/
@@ -53,7 +55,7 @@ git commit -m "feat(apps): add vaultwarden"
 git push -u origin HEAD        # the Auto PR workflow opens the PR
 ```
 
-CI runs on the push. Once the 5 checks pass, merge the PR. Flux then deploys from `main`.
+CI runs on the push. Once the 6 checks pass, merge the PR. Flux then deploys from `main`.
 
 ### Commit messages
 
@@ -102,10 +104,15 @@ Deleting a file from git deletes its objects from the cluster, because every Flu
 
 ## Storage
 
-`local-path` is the default StorageClass. Volumes are directories under `/var/mnt/local-path-provisioner` on the worker's system disk. Terraform creates that directory as a Talos `UserVolumeConfig` (`terraform/modules/talos-cluster/talos.tf`).
+**`longhorn`** is the default StorageClass. Each volume is kept on both workers (2 replicas), so if one worker goes down its pods can restart on the other with their data.
 
-- A volume is tied to the node it was created on. If that node is down, pods using it can't start elsewhere.
-- Volumes share the ~19 GB EPHEMERAL partition with container images and logs.
+- Data lives on a dedicated 50 GB disk per worker (`data_disk_size` in `terraform/main.tf`), mounted by Talos at `/var/mnt/longhorn` (`patches/worker/longhorn-volume.yaml`). With 2 replicas, usable space is about one disk.
+- Talos needs the `iscsi-tools` and `util-linux-tools` extensions for Longhorn; they're in the image list in `terraform/main.tf`.
+- UI (no login, so it isn't exposed): `kubectl -n longhorn-system port-forward svc/longhorn-frontend 8000:80`, then http://localhost:8000
+
+**Backups** go to the Unraid NAS over NFS: `nfs://10.10.20.3:/mnt/user/longhorn`. Every volume is backed up daily (7 kept) and weekly on Sundays (4 kept), from `longhorn-config/recurring-jobs.yaml`. Backups are incremental and survive deleting the volume or the whole cluster. To restore: Longhorn UI → Backup → pick a backup → Restore, then point a PVC at the restored volume.
+
+**`local-path`** is still there for scratch data: set `storageClassName: local-path`. Its volumes are directories under `/var/mnt/local-path-provisioner` on one worker's system disk, aren't replicated or backed up, and share the ~19 GB EPHEMERAL partition with images and logs.
 
 ## Certificates
 
@@ -145,7 +152,8 @@ kubectl -n flux-system create secret generic sops-age \
 
 - Kubelet settings live in the `KubeletConfig` document. Patching `.machine.kubelet` fails with `kubelet config is already set in v1alpha1 config`, and `extraMounts` no longer exists. Host paths for pods go under `/var/mnt` as user volumes.
 - Install settings live in `UnattendedInstallConfig`, not `.machine.install`.
-- Talos enforces the `baseline` Pod Security level. Namespaces whose pods need host access (`metallb-system`, `local-path-storage`) are labeled `pod-security.kubernetes.io/enforce: privileged`.
+- Talos enforces the `baseline` Pod Security level. Namespaces whose pods need host access (`metallb-system`, `local-path-storage`, `longhorn-system`) are labeled `pod-security.kubernetes.io/enforce: privileged`.
+- System extensions are baked into the image. Changing the `extensions` list in `terraform/main.tf` changes the installer image; after `terraform apply`, roll each node with `talosctl -n <ip> upgrade --image "$(terraform -chdir=terraform output -raw installer_image)"`.
 - Check a config patch before applying it: `talosctl validate --config <file> --mode metal`.
 
 ## Experiments

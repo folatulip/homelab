@@ -1,6 +1,7 @@
 # local-path-provisioner: PersistentVolumes as directories on the node's disk.
 # Simple and fast, but a volume lives on one node: if that node dies, its data
-# is unavailable (pods using it can't move). Fine for a start; Longhorn later.
+# is unavailable (pods using it can't move). Longhorn is the default StorageClass;
+# use storageClassName: local-path for scratch data that can be lost.
 #
 # Talos side: workers get a UserVolumeConfig directory at /var/mnt/local-path-provisioner
 # (terraform/modules/talos-cluster/talos.tf).
@@ -34,11 +35,11 @@ patches:
         name: local-path-storage
         labels:
           pod-security.kubernetes.io/enforce: privileged
-  # PVCs without storageClassName get this one.
+  # Not the default: PVCs without storageClassName go to Longhorn.
   - patch: |-
       apiVersion: storage.k8s.io/v1
       kind: StorageClass
       metadata:
         name: local-path
         annotations:
-          storageclass.kubernetes.io/is-default-class: "true"
+          storageclass.kubernetes.io/is-default-class: "false"

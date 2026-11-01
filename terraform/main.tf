@@ -11,6 +11,15 @@ module "talos_image" {
   source        = "./modules/talos-image"
   talos_version = local.talos_version
   proxmox_nodes = ["goose"] # add "goose2" once a VM is placed there
+
+  # iscsi-tools + util-linux-tools: required by Longhorn (iSCSI, fstrim, nsenter).
+  # Changing this list changes the installer image: roll nodes with
+  # `talosctl upgrade --image <terraform output installer_image>` after apply.
+  extensions = [
+    "siderolabs/qemu-guest-agent",
+    "siderolabs/iscsi-tools",
+    "siderolabs/util-linux-tools",
+  ]
 }
 
 # --- Trusted cluster (VLAN 20, untagged on vmbr0) ---------------------
@@ -29,8 +38,8 @@ module "trusted" {
 
   nodes = {
     talos-cp1 = { vm_id = 401, ip = "10.10.20.50", role = "controlplane", proxmox_node = "goose", memory = 4096 }
-    talos-w1  = { vm_id = 411, ip = "10.10.20.75", role = "worker", proxmox_node = "goose", memory = 6144 }
-    talos-w2  = { vm_id = 412, ip = "10.10.20.62", role = "worker", proxmox_node = "goose", memory = 6144 }
+    talos-w1  = { vm_id = 411, ip = "10.10.20.75", role = "worker", proxmox_node = "goose", memory = 6144, data_disk_size = 50 }
+    talos-w2  = { vm_id = 412, ip = "10.10.20.62", role = "worker", proxmox_node = "goose", memory = 6144, data_disk_size = 50 }
   }
 }
 
