@@ -1,5 +1,7 @@
-# Backup schedule. RecurringJob is a Longhorn CRD, so this applies after longhorn/.
+# Backup schedule and extra storage classes. RecurringJob is a Longhorn CRD,
+# so this applies after longhorn/.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - recurring-jobs.yaml
+  - storageclass-retain.yaml
