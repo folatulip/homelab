@@ -1,0 +1,60 @@
+# Postgres, same version as the old LXC (postgres:16.14). Major upgrades need
+# a dump/restore, so bump the tag only within 16.x.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sure-db
+spec:
+  serviceName: sure-db
+  replicas: 1
+  selector:
+    matchLabels: { app: sure-db }
+  template:
+    metadata:
+      labels: { app: sure-db }
+    spec:
+      securityContext:
+        runAsUser: 999 # postgres user in the image
+        runAsGroup: 999
+        fsGroup: 999
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: postgres:16.14
+          env:
+            - name: POSTGRES_USER
+              valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_USER } }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_PASSWORD } }
+            - name: POSTGRES_DB
+              valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_DB } }
+            - name: PGDATA # subfolder: the volume root has lost+found
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 50m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: sure-db }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sure-db
+spec:
+  selector: { app: sure-db }
+  ports:
+    - port: 5432

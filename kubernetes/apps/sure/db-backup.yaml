@@ -1,0 +1,58 @@
+# Nightly pg_dump into the sure-db-dumps volume, keeping 14 days. Runs at
+# 07:00 UTC, an hour before Longhorn's daily backup copies the volume to the
+# NAS. A dump is the reliable way to back up a running database; the Longhorn
+# backup of sure-db alone is only crash-consistent.
+# Restore: pg_restore --clean --if-exists -d sure_production <file>.dump
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sure-db-dump
+spec:
+  schedule: "0 7 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+            runAsNonRoot: true
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: dump
+              image: postgres:16.14
+              env:
+                - name: PGHOST
+                  value: sure-db
+                - name: PGUSER
+                  valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_USER } }
+                - name: PGPASSWORD
+                  valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_PASSWORD } }
+                - name: PGDATABASE
+                  valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_DB } }
+              command:
+                - sh
+                - -ec
+                - |
+                  f=/dumps/sure-$(date -u +%Y%m%d-%H%M%S).dump
+                  pg_dump -Fc -f "$f.partial"
+                  pg_restore -l "$f.partial" > /dev/null # fails on a broken dump
+                  mv "$f.partial" "$f"
+                  find /dumps -name 'sure-*.dump' -mtime +14 -delete
+                  find /dumps -name '*.partial' -delete
+                  ls -lh /dumps
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: { drop: ["ALL"] }
+              volumeMounts:
+                - name: dumps
+                  mountPath: /dumps
+          volumes:
+            - name: dumps
+              persistentVolumeClaim: { claimName: sure-db-dumps }

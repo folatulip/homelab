@@ -1,0 +1,52 @@
+# All on longhorn-retain: deleting a PVC keeps the volume. Flux also never
+# prunes these (annotation), even if sure is removed from git.
+# Longhorn backs every volume up to the NAS daily (longhorn-config).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sure-db
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 5Gi }
+---
+# Rails Active Storage (uploads), shared by the web and worker containers.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sure-storage
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 5Gi }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sure-redis
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 1Gi }
+---
+# Nightly pg_dump files (db-backup.yaml).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sure-db-dumps
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 5Gi }
