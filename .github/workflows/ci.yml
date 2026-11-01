@@ -5,10 +5,12 @@
 # Tool versions are bumped by Renovate (the "# renovate:" comments).
 name: CI
 
+# Runs on every branch push rather than on pull_request: PRs opened by the
+# Auto PR workflow use GITHUB_TOKEN, and GitHub doesn't fire pull_request
+# workflows for those. Checks attach to the commit, so the PR still shows them.
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -84,6 +86,17 @@ jobs:
           kubeconform -v
       - name: Render and validate
         run: scripts/ci/validate-kubernetes.sh
+
+  commits:
+    name: Commit messages
+    runs-on: ubuntu-24.04
+    if: github.ref != 'refs/heads/main' # main only gets merges of linted branches
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # need main's history to find this branch's commits
+      - name: Conventional Commits
+        run: scripts/ci/lint-commits.sh origin/main..HEAD
 
   secrets:
     name: Secret scan

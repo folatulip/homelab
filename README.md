@@ -41,9 +41,41 @@ kubernetes/
     pvc-test/              throwaway storage check (not deployed by Flux)
 ```
 
+## Workflow
+
+`main` is protected, so every change goes through a PR:
+
+```sh
+git switch -c feat/vaultwarden
+git commit -m "feat(apps): add vaultwarden"
+git push -u origin HEAD        # the Auto PR workflow opens the PR
+```
+
+CI runs on the push. Once the 5 checks pass, merge the PR. Flux then deploys from `main`.
+
+### Commit messages
+
+[Conventional Commits](https://www.conventionalcommits.org): `<type>(<scope>): <description>`, with a header of 72 chars max and a lowercase scope.
+
+| Type | For |
+|---|---|
+| `feat` | something new: an app, an add-on, a capability |
+| `fix` | fixing something broken |
+| `chore` | upkeep, dependency bumps (Renovate uses `chore(deps)`) |
+| `refactor` | same result, restructured |
+| `docs` / `ci` / `build` / `test` / `perf` / `style` / `revert` | what they say |
+
+Typical scopes: `terraform`, `talos`, `flux`, `metallb`, `traefik`, `storage`, `apps`, `ci`. Add `!` for breaking changes, e.g. `fix(talos)!: …`.
+
+The **Commit messages** CI job checks every commit on the branch. To get the same check at commit time, enable the local hook once per clone:
+
+```sh
+git config core.hooksPath scripts/git-hooks
+```
+
 ## Deploying changes
 
-Flux watches `main`. Commit and push, and Flux applies the change within a minute.
+Flux watches `main`. Merge a PR, and Flux applies the change within a minute.
 
 ```sh
 flux reconcile kustomization flux-system --with-source   # apply now instead of waiting
