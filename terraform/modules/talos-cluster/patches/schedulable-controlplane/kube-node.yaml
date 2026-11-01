@@ -1,0 +1,14 @@
+# Control plane that also runs regular pods (allow_scheduling_on_control_planes).
+# Talos >= 1.14: node labels/taints live in the KubeNodeConfig document;
+# .cluster.allowSchedulingOnControlPlanes is rejected next to it.
+# - drop the NoSchedule taint so pods can land here
+# - drop exclude-from-external-load-balancers so MetalLB can announce
+#   LoadBalancer IPs (Traefik) from this node too
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+labels:
+  node.kubernetes.io/exclude-from-external-load-balancers:
+    $patch: delete
+taints:
+  node-role.kubernetes.io/control-plane:
+    $patch: delete
