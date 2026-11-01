@@ -1,13 +1,15 @@
-# hello.10.10.20.201.sslip.io resolves to Traefik's IP via public wildcard DNS,
-# so this works before you have local DNS. Swap for e.g. hello.home.lan later.
+# hello.lab.felixlatulip.ca gets HTTPS from Traefik's default wildcard cert
+# (infrastructure/cert-manager-config/wildcard.yaml), so no tls section needed.
+# hello.10.10.20.201.sslip.io resolves via public wildcard DNS and keeps working
+# before local DNS exists (HTTP only; HTTPS shows a name mismatch).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: hello
 spec:
   rules:
-    - host: hello.10.10.20.201.sslip.io
-      http:
+    - host: hello.lab.felixlatulip.ca
+      http: &hello
         paths:
           - path: /
             pathType: Prefix
@@ -15,3 +17,5 @@ spec:
               service:
                 name: hello
                 port: { number: 80 }
+    - host: hello.10.10.20.201.sslip.io
+      http: *hello
