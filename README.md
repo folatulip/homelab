@@ -23,7 +23,7 @@ Each cluster has one VM on each Proxmox host, so either host can go down for mai
 
 The Proxmox node names are still `goose` and `goose2`; Terraform refers to them by those names.
 
-`k8s-dmz` is off (`dmz_enabled = false` in `terraform/main.tf`) until VLAN 50 exists. See [Turning on k8s-dmz](#turning-on-k8s-dmz).
+`k8s-dmz` can be switched off with `dmz_enabled = false` in `terraform/main.tf`. See [Turning on k8s-dmz](#turning-on-k8s-dmz).
 
 ## Health check
 

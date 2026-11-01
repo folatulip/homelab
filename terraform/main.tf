@@ -52,7 +52,7 @@ module "trusted" {
 # ports. Then set dmz_enabled = true (also adds VLAN 50 to the host bridges
 # in proxmox.tf) and apply.
 locals {
-  dmz_enabled = false
+  dmz_enabled = true
 }
 
 module "dmz" {
