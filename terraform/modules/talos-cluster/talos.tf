@@ -4,11 +4,14 @@ locals {
   controlplane_ips = [for n in var.nodes : n.ip if n.role == "controlplane"]
 
   patches = {
-    for dir in ["common", "controlplane", "worker"] : dir => [
+    for dir in ["common", "controlplane", "worker", "data-disk"] : dir => [
       for f in sort(fileset("${path.module}/patches/${dir}", "*.yaml")) :
       templatefile("${path.module}/patches/${dir}/${f}", { installer_image = var.installer_image })
     ]
   }
+
+  # Lets control planes run regular pods (small clusters where the CP is also a worker).
+  scheduling_patch = yamlencode({ cluster = { allowSchedulingOnControlPlanes = true } })
 }
 
 resource "talos_machine_secrets" "this" {
@@ -25,8 +28,14 @@ data "talos_machine_configuration" "this" {
   talos_version    = var.talos_version
 
   # YAML patches in ./patches (see patches/README.md): common/ for every
-  # node, then the folder matching the node's role.
-  config_patches = concat(local.patches["common"], local.patches[each.value.role])
+  # node, the folder matching the node's role, and data-disk/ for nodes
+  # with a data disk.
+  config_patches = concat(
+    local.patches["common"],
+    local.patches[each.value.role],
+    each.value.data_disk_size > 0 ? local.patches["data-disk"] : [],
+    each.value.role == "controlplane" && var.allow_scheduling_on_control_planes ? [local.scheduling_patch] : [],
+  )
 }
 
 resource "talos_machine_configuration_apply" "this" {

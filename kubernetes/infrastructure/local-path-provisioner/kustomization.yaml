@@ -1,7 +1,7 @@
 # local-path-provisioner: PersistentVolumes as directories on the node's disk.
 #
-# Talos side: workers get a UserVolumeConfig directory at /var/mnt/local-path-provisioner
-# (terraform/modules/talos-cluster/talos.tf).
+# Talos side: every node gets a UserVolumeConfig directory at /var/mnt/local-path-provisioner
+# (terraform/modules/talos-cluster/patches/common/local-path-volume.yaml).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
