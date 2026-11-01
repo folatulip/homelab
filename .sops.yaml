@@ -1,10 +1,3 @@
-# sops encryption rules. `sops -e -i <file>` picks the first rule whose
-# path_regex matches. Only Secret values (data/stringData) are encrypted, so
-# the rest of the file stays readable in diffs and validatable in CI.
-#
-# Public key = safe to commit. The private key lives in
-# ~/Library/Application Support/sops/age/keys.txt (keep a copy in a password manager) and in the
-# cluster as Secret flux-system/sops-age.
 creation_rules:
   - path_regex: ^kubernetes/.*\.sops\.ya?ml$
     encrypted_regex: ^(data|stringData)$

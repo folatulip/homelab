@@ -1,7 +1,4 @@
 # local-path-provisioner: PersistentVolumes as directories on the node's disk.
-# Simple and fast, but a volume lives on one node: if that node dies, its data
-# is unavailable (pods using it can't move). Longhorn is the default StorageClass;
-# use storageClassName: local-path for scratch data that can be lost.
 #
 # Talos side: workers get a UserVolumeConfig directory at /var/mnt/local-path-provisioner
 # (terraform/modules/talos-cluster/talos.tf).
