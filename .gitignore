@@ -1,10 +1,93 @@
-*.tfvars
+# ---------- Terraform ----------
+**/.terraform/*
 *.tfstate
 *.tfstate.*
-.terraform/
+*.tfstate.backup
+crash.log
+crash.*.log
 *.tfplan
+*.plan
 
-# Cluster credentials (terraform output -raw talosconfig/kubeconfig)
+# Variable files usually hold secrets (API tokens, passwords)
+# Commit a sanitized example instead: terraform.tfvars.example
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Local overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI config (can contain credentials)
+.terraformrc
+terraform.rc
+
+# NOTE: DO commit .terraform.lock.hcl (pins provider versions)
+
+# ---------- Talos ----------
+# Generated machine configs embed cluster secrets (CA keys, tokens)
 talosconfig
+**/talosconfig
+controlplane.yaml
+worker.yaml
+secrets.yaml
+**/_out/
+
+# ---------- Kubernetes ----------
 kubeconfig
+**/kubeconfig
 *.kubeconfig
+.kube/
+
+# Raw (unencrypted) Secrets.
+*secret*.yaml
+!*.sops.yaml
+
+# Helm
+charts/*.tgz
+**/charts/*.tgz
+
+# ---------- SOPS / age ----------
+# Never commit your private age key
+*.agekey
+keys.txt
+.sops/
+# Decrypted outputs
+*.dec.yaml
+*.decrypted.*
+
+# ---------- Cloudflare ----------
+# Tunnel credentials JSON + cert
+cert.pem
+**/.cloudflared/
+*-tunnel*.json
+
+# ---------- Generic secrets ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+id_rsa*
+id_ed25519*
+
+# ---------- Ansible ----------
+*.retry
+.vault_pass*
+vault-password*
+
+# ---------- Editors / OS ----------
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Obsidian
+.obsidian/workspace*
+.obsidian/cache
+.trash/
