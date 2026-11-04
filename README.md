@@ -197,13 +197,13 @@ Per-cluster values (`LB_RANGE`, `TRAEFIK_IP`) live in each cluster's `infrastruc
 
 ```sh
 app=myapp
-cp -r doc/templates/helm-app kubernetes/apps/$app
-sed -i '' "s/APP_NAME/$app/g" kubernetes/apps/$app/*.yaml
+cp -r doc/templates/helm-app kubernetes/apps/trusted/$app
+sed -i '' "s/APP_NAME/$app/g" kubernetes/apps/trusted/$app/*.yaml
 ```
 
 1. Fill in the chart and `values:` in `helmrelease.yaml`.
-2. Encrypt the secret: `sops -e -i kubernetes/apps/$app/secret.sops.yaml`.
-3. Add `$app` to `kubernetes/apps/kustomization.yaml`.
+2. Encrypt the secret: `sops -e -i kubernetes/apps/trusted/$app/secret.sops.yaml`.
+3. Add `$app` to `kubernetes/apps/trusted/kustomization.yaml`.
 4. Open a PR.
 
 > Full guide: [doc/adding-an-app.md](doc/adding-an-app.md).

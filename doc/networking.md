@@ -25,18 +25,18 @@ Until then, the `sslip.io` hostnames work over plain HTTP.
 
 ## Public apps (k8s-dmz)
 
-Public apps run on k8s-dmz and are reached only through a **Cloudflare Tunnel**: cloudflared (2 replicas, `kubernetes/dmz/cloudflared/`) opens outbound connections to Cloudflare, so no router ports are open. Cloudflare terminates HTTPS and forwards to the DMZ Traefik, which routes by hostname.
+Public apps run on k8s-dmz and are reached only through a **Cloudflare Tunnel**: cloudflared (2 replicas, `kubernetes/infrastructure/cloudflared/`) opens outbound connections to Cloudflare, so no router ports are open. Cloudflare terminates HTTPS and forwards to the DMZ Traefik, which routes by hostname.
 
 The tunnel `k8s-dmz` is managed in the Cloudflare Zero Trust dashboard (Networks → Tunnels). To publish an app:
 
-1. Add it under `kubernetes/dmz/apps/<name>/` with an Ingress for `<name>.felixlatulip.ca`, and list it in `kubernetes/dmz/apps/kustomization.yaml`. No `tls` section.
+1. Add it under `kubernetes/apps/dmz/<name>/` with an Ingress for `<name>.felixlatulip.ca`, and list it in `kubernetes/apps/dmz/kustomization.yaml`. No `tls` section.
 2. In the tunnel's public hostnames, add `<name>.felixlatulip.ca` → `HTTP` → `traefik.traefik.svc.cluster.local`. Cloudflare creates the DNS record.
 
-The tunnel token is in `dmz/cloudflared/tunnel-token.sops.yaml`. To rotate it, refresh the token in the dashboard, copy it, and re-create the file:
+The tunnel token is in `infrastructure/cloudflared/tunnel-token.sops.yaml`. To rotate it, refresh the token in the dashboard, copy it, and re-create the file:
 
 ```sh
 kubectl create secret generic tunnel-token -n cloudflared --from-literal=token="$(pbpaste)" \
-  --dry-run=client -o yaml > kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
-sops -e -i kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
+  --dry-run=client -o yaml > kubernetes/infrastructure/cloudflared/tunnel-token.sops.yaml
+sops -e -i kubernetes/infrastructure/cloudflared/tunnel-token.sops.yaml
 ```
 

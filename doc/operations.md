@@ -41,8 +41,8 @@ These are for trying things out. Anything managed by Flux gets reverted to what'
 ```sh
 kubectl get pods -o wide                  # hello pods spread across cp1/w1
 kubectl delete pod <one-of-them>          # watch a replacement appear
-kubectl apply -f kubernetes/apps/pvc-test/ && kubectl logs pvc-test
-kubectl delete -f kubernetes/apps/pvc-test/
+kubectl apply -f kubernetes/apps/trusted/pvc-test/ && kubectl logs pvc-test
+kubectl delete -f kubernetes/apps/trusted/pvc-test/
 ```
 
-To change the number of hello pods, edit `replicas` in `kubernetes/apps/hello/hello.yml` and push. Running `kubectl scale` would get reverted by Flux.
+To change the number of hello pods, edit `replicas` in `kubernetes/apps/trusted/hello/hello.yml` and push. Running `kubectl scale` would get reverted by Flux.

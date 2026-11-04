@@ -3,7 +3,7 @@
 ## 1. Cleanup
 
 - [ ] Rename nodes `goose` / `goose2` to `goose-s1-pve` / `goose-s2-pve`
-- [ ] Restructure the `kubernetes/` folder so it's easier to follow
+- [x] Restructure the `kubernetes/` folder so it's easier to follow
 - [ ] Migrate services to Helm
 - [ ] Improve the docs
 
