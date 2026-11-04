@@ -71,10 +71,10 @@ config:
     titleColor: "#f2f2f2"
 ---
 flowchart TB
-    NET["<div style='width:170px;text-align:center;line-height:1.35'><b>🌐 Internet</b></div>"]
-    GW["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/unifi.png' style='width:30px;height:30px;max-width:30px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>Router</b></div>"]
-    WIFI["<div style='width:150px;text-align:center;line-height:1.35'><b>📶 VLAN10</b><br/>Wi-Fi</div>"]
-    IOT["<div style='width:150px;text-align:center;line-height:1.35'><b>💡 VLAN30</b><br/>IoT</div>"]
+    NET["<div style='width:170px;text-align:center;line-height:1.35'><b>Internet</b></div>"]
+    GW["<div style='width:200px;text-align:center;line-height:1.35'><b>Router</b></div>"]
+    WIFI["<div style='width:150px;text-align:center;line-height:1.35'><b>VLAN10</b><br/>Wi-Fi</div>"]
+    IOT["<div style='width:150px;text-align:center;line-height:1.35'><b>VLAN30</b><br/>IoT</div>"]
 
     NET ==> GW
     GW --> WIFI
@@ -85,28 +85,28 @@ flowchart TB
 
     subgraph NAS["<b>goose-nas (Unraid)</b>"]
         direction TB
-        H3["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/unraid.png' style='width:22px;height:22px;max-width:22px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span>i9-9900K · 16GB · 32TB</div>"]
-        PBS["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/proxmox-backup-server.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>PBS</b><br/><small>VM · 3GB</small></div>"]
-        QDEV["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/proxmox.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>QDevice</b><br/><small>VM · quorum</small></div>"]
+        H3["<div style='width:200px;text-align:center;line-height:1.35'>i9-9900K · 16GB · 32TB</div>"]
+        PBS["<div style='width:200px;text-align:center;line-height:1.35'><b>PBS</b><br/><small>VM · 3GB</small></div>"]
+        QDEV["<div style='width:200px;text-align:center;line-height:1.35'><b>QDevice</b><br/><small>VM · quorum</small></div>"]
         H3 ~~~ PBS ~~~ QDEV
     end
 
     subgraph S2["<b>goose2</b>"]
         direction TB
-        H2["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/proxmox.png' style='width:22px;height:22px;max-width:22px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span>i5-6500T · 20GB · 2.5GbE</div>"]
-        HAOS["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/home-assistant.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>HAOS</b><br/><small>VM · 3GB</small></div>"]
-        UOS["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/unifi.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>UniFi OS Server</b><br/><small>VM · 3GB</small></div>"]
-        PDM["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/proxmox.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>PDM</b><br/><small>LXC · 1GB</small></div>"]
-        K8TW["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/kubernetes.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>k8s-trusted-w1</b><br/><small>Worker · 6GB</small></div>"]
-        K8D2["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/kubernetes.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>k8s-dmz-2</b><br/><small>Worker · 3GB</small></div>"]
+        H2["<div style='width:200px;text-align:center;line-height:1.35'>i5-6500T · 20GB · 2.5GbE</div>"]
+        HAOS["<div style='width:200px;text-align:center;line-height:1.35'><b>HAOS</b><br/><small>VM · 3GB</small></div>"]
+        UOS["<div style='width:200px;text-align:center;line-height:1.35'><b>UniFi OS Server</b><br/><small>VM · 3GB</small></div>"]
+        PDM["<div style='width:200px;text-align:center;line-height:1.35'><b>PDM</b><br/><small>LXC · 1GB</small></div>"]
+        K8TW["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-w1</b><br/><small>Worker · 6GB</small></div>"]
+        K8D2["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-dmz-2</b><br/><small>Worker · 3GB</small></div>"]
         H2 ~~~ HAOS ~~~ UOS ~~~ PDM ~~~ K8TW ~~~ K8D2
     end
 
     subgraph S1["<b>goose</b>"]
         direction TB
-        H1["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/proxmox.png' style='width:22px;height:22px;max-width:22px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span>i5-8600K · 24GB · 10GbE</div>"]
-        K8TCP["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/kubernetes.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>k8s-trusted-cp1</b><br/><small>CP + worker · 12GB</small></div>"]
-        K8D1["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/kubernetes.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>k8s-dmz-1</b><br/><small>CP + worker · 4GB</small></div>"]
+        H1["<div style='width:200px;text-align:center;line-height:1.35'>i5-8600K · 24GB · 10GbE</div>"]
+        K8TCP["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-cp1</b><br/><small>CP + worker · 12GB</small></div>"]
+        K8D1["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-dmz-1</b><br/><small>CP + worker · 4GB</small></div>"]
         H1 ~~~ K8TCP ~~~ K8D1
     end
 
