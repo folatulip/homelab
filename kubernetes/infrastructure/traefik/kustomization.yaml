@@ -16,3 +16,11 @@ patches:
       - op: replace
         path: /subjects/0/namespace
         value: traefik
+  # Flux never deletes the Traefik CRDs, even if they leave this folder.
+  # Deleting a CRD deletes every resource of that kind (like our TLSStore).
+  - target:
+      kind: CustomResourceDefinition
+    patch: |-
+      - op: add
+        path: /metadata/annotations/kustomize.toolkit.fluxcd.io~1prune
+        value: disabled
