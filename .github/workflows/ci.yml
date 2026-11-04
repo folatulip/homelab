@@ -1,13 +1,16 @@
-# Checks every change before Flux deploys it. This is CI only: deployment is
-# Flux pulling main from inside the cluster, and Terraform is applied by hand
-# (the runners can't reach Proxmox/Talos, and the state holds cluster secrets).
+# CI
 #
-# Tool versions are bumped by Renovate (the "# renovate:" comments).
+# Runs the checks on every push. Nothing gets deployed from here:
+# - Flux pulls main from inside the cluster
+# - Terraform is applied by hand (runners can't reach Proxmox/Talos, and the
+#   state has cluster secrets in it)
+#
+# Tool versions are updated by Renovate (see the "# renovate:" comments).
 name: CI
 
-# Runs on every branch push rather than on pull_request: PRs opened by the
-# Auto PR workflow use GITHUB_TOKEN, and GitHub doesn't fire pull_request
-# workflows for those. Checks attach to the commit, so the PR still shows them.
+# Using push instead of pull_request because PRs opened by Auto PR use
+# GITHUB_TOKEN, and those don't trigger pull_request workflows.
+# The checks still show up on the PR since they run on the same commit.
 on:
   push:
     branches: ['**']
@@ -38,23 +41,32 @@ jobs:
       run:
         working-directory: terraform
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
           terraform_wrapper: false
-      - name: fmt
+
+      - name: Check formatting
         run: terraform fmt -check -recursive -diff
-      - name: init (no backend, no credentials)
-        run: terraform init -backend=false -input=false
-      - name: validate
+
+      - name: Init
+        run: terraform init -backend=false -input=false # no backend, so no credentials needed
+
+      - name: Validate
         run: terraform validate
-      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+
+      - name: Install TFLint
+        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
         with:
           tflint_version: ${{ env.TFLINT_VERSION }}
-      - name: tflint
+
+      - name: TFLint
         env:
-          GITHUB_TOKEN: ${{ github.token }} # avoids rate limits on plugin download
+          GITHUB_TOKEN: ${{ github.token }} # so plugin downloads don't get rate limited
         run: |
           tflint --init --config "$PWD/.tflint.hcl"
           tflint --recursive --config "$PWD/.tflint.hcl" --format compact
@@ -63,52 +75,68 @@ jobs:
     name: Talos config
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install talosctl (same version as the cluster, from terraform/main.tf)
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Use the same talosctl version as the cluster (from terraform/main.tf)
+      - name: Install talosctl
         run: |
-          v=$(sed -n 's/.*talos_version *= *"\(v[0-9.]*\)".*/\1/p' terraform/main.tf | head -1)
-          curl -sSfL -o /usr/local/bin/talosctl \
-            "https://github.com/siderolabs/talos/releases/download/${v}/talosctl-linux-amd64"
+          talos_version=$(sed -n 's/.*talos_version *= *"\(v[0-9.]*\)".*/\1/p' terraform/main.tf | head -1)
+          url="https://github.com/siderolabs/talos/releases/download/${talos_version}/talosctl-linux-amd64"
+
+          curl -sSfL -o /usr/local/bin/talosctl "$url"
           chmod +x /usr/local/bin/talosctl
           talosctl version --client --short
-      - name: Validate patched configs
+
+      - name: Validate configs
         run: scripts/ci/validate-talos.sh
 
   kubernetes:
     name: Kubernetes manifests
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Install kubeconform
         run: |
-          curl -sSfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" |
-            tar -xz -C /usr/local/bin kubeconform
+          url="https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+
+          curl -sSfL "$url" | tar -xz -C /usr/local/bin kubeconform
           kubeconform -v
-      - name: Render and validate
+
+      - name: Validate manifests
         run: scripts/ci/validate-kubernetes.sh
 
   commits:
     name: Commit messages
     runs-on: ubuntu-24.04
-    if: github.ref != 'refs/heads/main' # main only gets merges of linted branches
+    if: github.ref != 'refs/heads/main' # main only gets merges from branches that already passed
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # need main's history to find this branch's commits
-      - name: Conventional Commits
+          fetch-depth: 0 # full history, needed to compare with main
+
+      - name: Lint commit messages
         run: scripts/ci/lint-commits.sh origin/main..HEAD
 
   secrets:
     name: Secret scan
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # scan the whole history, not just the latest commit
+          fetch-depth: 0 # full history, so old commits get scanned too
+
       - name: Install gitleaks
         run: |
-          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz" |
-            tar -xz -C /usr/local/bin gitleaks
+          version_number=${GITLEAKS_VERSION#v} # the file name has no "v" in it
+          url="https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${version_number}_linux_x64.tar.gz"
+
+          curl -sSfL "$url" | tar -xz -C /usr/local/bin gitleaks
           gitleaks version
-      - name: gitleaks
+
+      - name: Run gitleaks
         run: gitleaks git --redact --no-banner --verbose .
