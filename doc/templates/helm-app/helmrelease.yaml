@@ -1,0 +1,40 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: APP_NAME
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: CHART_NAME
+      version: CHART_VERSION # pin exactly, never a range
+      sourceRef:
+        kind: HelmRepository
+        name: REPO_NAME
+  install:
+    remediation: { retries: 3 }
+  upgrade:
+    remediation: { retries: 3 }
+  # Only override what you need. Look up the key names in the chart's values.yaml:
+  #   helm show values REPO_URL/CHART_NAME --version CHART_VERSION   (oci)
+  values:
+    # Credentials from secret.sops.yaml, not inline here.
+    # existingSecret: APP_NAME-secret
+
+    # Data on the PVC from pvcs.yaml (longhorn-retain, never pruned).
+    # persistence:
+    #   existingClaim: APP_NAME-data
+
+    # LAN access. Traefik is the default class and serves the *.lab wildcard
+    # cert, so no ingressClassName or tls section is needed.
+    ingress:
+      enabled: true
+      hosts:
+        - host: APP_NAME.lab.felixlatulip.ca
+          paths:
+            - path: /
+              pathType: Prefix
+
+    resources:
+      requests: { cpu: 10m, memory: 64Mi }
+      limits: { memory: 256Mi }
