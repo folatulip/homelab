@@ -1,0 +1,10 @@
+# Where Flux pulls the chart from. For an OCI registry, keep `type: oci` and use
+# an oci:// URL. For a classic Helm repo, delete `type` and use the https:// URL.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: REPO_NAME
+spec:
+  interval: 12h
+  type: oci
+  url: REPO_URL
