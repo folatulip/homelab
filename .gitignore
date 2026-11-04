@@ -9,7 +9,6 @@ crash.*.log
 *.plan
 
 # Variable files usually hold secrets (API tokens, passwords)
-# Commit a sanitized example instead: terraform.tfvars.example
 *.tfvars
 *.tfvars.json
 !*.tfvars.example

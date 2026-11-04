@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - hello
   - sure
+  - vaultwarden
