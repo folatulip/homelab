@@ -244,7 +244,7 @@ Thanks again!
 
 ## Unofficial Wiki
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/folatulip/homelab)
+[![DeepWiki](https://img.shields.io/badge/deepwiki-purple?label=&logo=deepl&style=for-the-badge&logoColor=white)](https://deepwiki.com/folatulip/homelab)
 
 ## License
 
