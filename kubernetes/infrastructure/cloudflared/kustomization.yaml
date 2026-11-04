@@ -1,7 +1,7 @@
 # Cloudflare Tunnel connector for k8s-dmz. The tunnel is managed in the
 # Cloudflare Zero Trust dashboard: each public hostname there points to
 # http://traefik.traefik.svc.cluster.local, and Traefik routes by Host header
-# to the app's Ingress (kubernetes/dmz/apps/). Only outbound connections to
+# to the app's Ingress (kubernetes/apps/dmz/). Only outbound connections to
 # Cloudflare; nothing on the LAN or router is opened.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
