@@ -1,0 +1,4 @@
+# Trivy findings we're ok with (used by the misconfiguration scan in CI)
+# One rule ID per line, with a comment saying why. Example:
+#
+# KSV014 # traefik needs to write to its root filesystem
