@@ -1,7 +1,7 @@
 # First matching rule wins.
 creation_rules:
   # k8s-dmz: its own key, so the DMZ cluster can't decrypt k8s-trusted secrets.
-  - path_regex: ^kubernetes/dmz/.*\.sops\.ya?ml$
+  - path_regex: ^kubernetes/(apps/dmz|infrastructure/cloudflared)/.*\.sops\.ya?ml$
     encrypted_regex: ^(data|stringData)$
     age: age1g6rnv9ag0mle6s8x4elwka2k53pnwewzz3ey28msqd5y7eke5srsmdshvm
   # k8s-trusted

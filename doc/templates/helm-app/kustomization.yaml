@@ -1,5 +1,5 @@
 # Template for a Helm-based app on k8s-trusted. See "Adding a new service" in the
-# root README. Copy to kubernetes/apps/APP_NAME/ and replace every placeholder:
+# root README. Copy to kubernetes/apps/trusted/APP_NAME/ and replace every placeholder:
 #   APP_NAME       app name: folder, namespace, release and hostname
 #   REPO_NAME      short name for the chart repository (e.g. bjw-s, helmforge)
 #   REPO_URL       chart repository URL (https://... or oci://...)

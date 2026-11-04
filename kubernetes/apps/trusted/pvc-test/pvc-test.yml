@@ -1,5 +1,5 @@
 # Throwaway check that storage works: writes a file to a 1Gi volume, then idles.
-# Delete with: kubectl delete -f kubernetes/apps/pvc-test/
+# Delete with: kubectl delete -f kubernetes/apps/trusted/pvc-test/
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

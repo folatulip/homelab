@@ -1,6 +1,6 @@
 # All my services. Starts after ingress and storage are ready.
-# To add an app: create kubernetes/apps/<name>/ and list it in
-# kubernetes/apps/kustomization.yaml.
+# To add an app: create kubernetes/apps/trusted/<name>/ and list it in
+# kubernetes/apps/trusted/kustomization.yaml.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -14,7 +14,7 @@ spec:
     - name: longhorn-config # storage classes (longhorn-retain)
   interval: 10m
   retryInterval: 1m
-  path: ./kubernetes/apps
+  path: ./kubernetes/apps/trusted
   prune: true
   sourceRef:
     kind: GitRepository

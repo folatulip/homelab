@@ -1,7 +1,7 @@
 # k8s-dmz add-ons: the same folders as k8s-trusted (kubernetes/infrastructure/),
-# with DMZ IPs filled in by postBuild.substitute, plus DMZ-only folders under
-# kubernetes/dmz/. No Longhorn or cert-manager. Secrets use a separate DMZ age
-# key, so k8s-trusted's secrets stay unreadable from here.
+# with DMZ IPs filled in by postBuild.substitute, plus the DMZ-only
+# kubernetes/infrastructure/cloudflared/. No Longhorn or cert-manager. Secrets
+# use a separate DMZ age key, so k8s-trusted's secrets stay unreadable from here.
 # wait: true = a Kustomization is only Ready once its workloads are healthy.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -86,7 +86,7 @@ spec:
     - name: traefik
   interval: 1h
   retryInterval: 1m
-  path: ./kubernetes/dmz/cloudflared
+  path: ./kubernetes/infrastructure/cloudflared
   prune: true
   wait: true
   sourceRef:
