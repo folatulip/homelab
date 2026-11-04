@@ -1,0 +1,54 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: vaultwarden
+      version: 1.14.6 # Vaultwarden 1.37.4
+      sourceRef:
+        kind: HelmRepository
+        name: helmforge
+  install:
+    remediation: { retries: 3 }
+  upgrade:
+    remediation: { retries: 3 }
+  # All values: https://github.com/helmforgedev/charts/blob/main/charts/vaultwarden/values.yaml
+  values:
+    domain: https://vaultwarden.lab.felixlatulip.ca
+
+    vaultwarden:
+      signupsAllowed: false
+      passwordHintsAllowed: false
+      orgCreationUsers: "felixlatulip@gmail.com"
+
+    admin:
+      existingSecret: vaultwarden-admin # from secret.sops.yaml
+      existingSecretTokenKey: admin-token
+
+    database:
+      mode: sqlite
+
+    data:
+      persistence:
+        existingClaim: vaultwarden-data # pvcs.yaml (longhorn-retain, never pruned)
+
+    # One pod at a time: RWO volume + SQLite.
+    deployment:
+      strategy:
+        type: Recreate
+        rollingUpdate: null
+
+    ingress:
+      enabled: true
+      hosts:
+        - host: vaultwarden.lab.felixlatulip.ca
+          paths:
+            - path: /
+              pathType: Prefix
+
+    resources:
+      requests: { cpu: 10m, memory: 64Mi }
+      limits: { memory: 256Mi }

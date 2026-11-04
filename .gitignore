@@ -4,7 +4,8 @@
 .terraform/
 *.tfplan
 
-# Cluster credentials (terraform output -raw talosconfig/kubeconfig)
 talosconfig
 kubeconfig
 *.kubeconfig
+
+*.DS_STORE
