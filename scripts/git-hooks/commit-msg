@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 # Rejects commits that don't follow Conventional Commits.
-# Enable once per clone: git config core.hooksPath scripts/git-hooks
-exec "$(git rev-parse --show-toplevel)/scripts/ci/lint-commits.sh" --file "$1"
+# To enable it (once per clone): git config core.hooksPath scripts/git-hooks
+repo_root=$(git rev-parse --show-toplevel)
+exec "$repo_root/scripts/ci/lint-commits.sh" --file "$1"
