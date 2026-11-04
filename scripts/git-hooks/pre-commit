@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Blocks commits that contain secrets (same gitleaks scan as CI, but on staged changes only).
+# To enable it (once per clone): git config core.hooksPath scripts/git-hooks
+# False positive? Add its fingerprint to .gitleaksignore, or bypass once with: git commit --no-verify
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "✗ gitleaks not installed, can't scan for secrets (brew install gitleaks)" >&2
+  echo "  to commit anyway: git commit --no-verify" >&2
+  exit 1
+fi
+
+exec gitleaks git --staged --redact --no-banner --verbose
