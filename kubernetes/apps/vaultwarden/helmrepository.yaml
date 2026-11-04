@@ -5,4 +5,4 @@ metadata:
 spec:
   interval: 12h
   type: oci
-  url: oci://ghcr.io/helmforgedev/helm/vaultwarden
+  url: oci://ghcr.io/helmforgedev/helm
