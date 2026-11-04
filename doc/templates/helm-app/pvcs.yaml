@@ -1,0 +1,13 @@
+# Data that can't be rebuilt from git. longhorn-retain keeps the volume if the
+# PVC is deleted, and the annotation stops Flux from ever pruning the PVC.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: APP_NAME-data
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 2Gi }

@@ -1,308 +1,258 @@
-# homelab
+<div align="center">
 
-Two Kubernetes clusters running Talos Linux on a two-host Proxmox cluster (`geese`):
+# FO's Homelab
+Everything that runs the 🪿 geese clusters, declared in code.
 
-- **`k8s-trusted`**: LAN-only services, on VLAN 20.
-- **`k8s-dmz`**: future public-facing apps, isolated on VLAN 50.
+</div>
 
-| Layer | Tool | Lives in |
+<div align="center">
+
+![Wifi](https://img.shields.io/badge/LAN-UP-2ea043?style=for-the-badge&logo=ubiquiti&logoColor=white)
+![Age](https://img.shields.io/badge/Age-0d-2ea043?style=for-the-badge&labelColor=1a1a1a)
+![Uptime](https://img.shields.io/badge/Uptime-0d-2ea043?style=for-the-badge&labelColor=1a1a1a)
+![Nodes](https://img.shields.io/badge/Nodes-2-326CE5?style=for-the-badge&labelColor=1a1a1a)
+![Pods](https://img.shields.io/badge/Pods-0-326CE5?style=for-the-badge&labelColor=1a1a1a)
+![CPU](https://img.shields.io/badge/CPU-0%25-E57000?style=for-the-badge&labelColor=1a1a1a)
+![Memory](https://img.shields.io/badge/Memory-0%25-E57000?style=for-the-badge&labelColor=1a1a1a)
+![Alerts](https://img.shields.io/badge/Alerts-0-2ea043?style=for-the-badge&labelColor=1a1a1a)
+
+</div>
+
+<div align="center">
+
+![Kubernetes][k8s-shield]
+![Proxmox][proxmox-shield]
+![Terraform][terraform-shield]
+![Talos][talos-shield]
+![Flux][flux-shield]
+
+</div>
+
+## Overview
+
+My homelab as code. Terraform builds the Proxmox VMs and two Talos Kubernetes clusters. Flux deploys everything else from this repo.
+
+> **What is a homelab?**
+>
+> Why rent the cloud when you can build your own? A homelab lets you self-host services, experiment freely, and get hands-on practice for certifications, right from your home.
+
+## Apps
+
+| App | What | URL |
 |---|---|---|
-| VMs and the Talos cluster | Terraform | `terraform/` |
-| Everything running on the cluster | Kubernetes YAML, applied by Flux | `kubernetes/` |
+| [Vaultwarden](https://github.com/dani-garcia/vaultwarden) | Password manager | `vaultwarden.lab.felixlatulip.ca` |
+| [Sure](https://github.com/we-promise/sure) | Personal finance | `sure.lab.felixlatulip.ca` |
 
-## Nodes
+## Network Topology
+```mermaid
+---
+config:
+  theme: base
+  flowchart:
+    htmlLabels: true
+    curve: basis
+    nodeSpacing: 30
+    rankSpacing: 22
+    padding: 10
+    subGraphTitleMargin:
+      top: 6
+      bottom: 6
+  themeVariables:
+    darkMode: true
+    background: "#141414"
+    fontFamily: "Inter, Segoe UI, Helvetica, Arial, sans-serif"
+    fontSize: 15px
+    primaryColor: "#1f1f1f"
+    primaryTextColor: "#f2f2f2"
+    primaryBorderColor: "#555"
+    lineColor: "#8a8a8a"
+    clusterBkg: "#1b1b1d"
+    clusterBorder: "#3a3a3d"
+    titleColor: "#f2f2f2"
+---
+flowchart TB
+    NET["<div style='width:170px;text-align:center;line-height:1.35'><b>Internet</b></div>"]
+    GW["<div style='width:200px;text-align:center;line-height:1.35'><b>Router</b></div>"]
+    WIFI["<div style='width:150px;text-align:center;line-height:1.35'><b>VLAN10</b><br/>Wi-Fi</div>"]
+    IOT["<div style='width:150px;text-align:center;line-height:1.35'><b>VLAN30</b><br/>IoT</div>"]
 
-Each cluster has one VM on each Proxmox host, so either host can go down for maintenance. The control planes also run workloads.
+    NET ==> GW
+    GW --> WIFI
+    GW --> S1
+    GW --> S2
+    GW --> NAS
+    GW --> IOT
+
+    subgraph NAS["<b>goose-nas (Unraid)</b>"]
+        direction TB
+        H3["<div style='width:200px;text-align:center;line-height:1.35'>i9-9900K · 16GB · 32TB</div>"]
+        PBS["<div style='width:200px;text-align:center;line-height:1.35'><b>PBS</b><br/><small>VM · 3GB</small></div>"]
+        QDEV["<div style='width:200px;text-align:center;line-height:1.35'><b>QDevice</b><br/><small>VM · quorum</small></div>"]
+        H3 ~~~ PBS ~~~ QDEV
+    end
+
+    subgraph S2["<b>goose2</b>"]
+        direction TB
+        H2["<div style='width:200px;text-align:center;line-height:1.35'>i5-6500T · 20GB · 2.5GbE</div>"]
+        HAOS["<div style='width:200px;text-align:center;line-height:1.35'><b>HAOS</b><br/><small>VM · 3GB</small></div>"]
+        UOS["<div style='width:200px;text-align:center;line-height:1.35'><b>UniFi OS Server</b><br/><small>VM · 3GB</small></div>"]
+        PDM["<div style='width:200px;text-align:center;line-height:1.35'><b>PDM</b><br/><small>LXC · 1GB</small></div>"]
+        K8TW["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-w1</b><br/><small>Worker · 6GB</small></div>"]
+        K8D2["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-dmz-2</b><br/><small>Worker · 3GB</small></div>"]
+        H2 ~~~ HAOS ~~~ UOS ~~~ PDM ~~~ K8TW ~~~ K8D2
+    end
+
+    subgraph S1["<b>goose</b>"]
+        direction TB
+        H1["<div style='width:200px;text-align:center;line-height:1.35'>i5-8600K · 24GB · 10GbE</div>"]
+        K8TCP["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-cp1</b><br/><small>CP + worker · 12GB</small></div>"]
+        K8D1["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-dmz-1</b><br/><small>CP + worker · 4GB</small></div>"]
+        H1 ~~~ K8TCP ~~~ K8D1
+    end
+
+    subgraph LEGEND[" "]
+        direction LR
+        L1["<div style='width:150px;text-align:center;line-height:1.35'>Mgmt · VLAN1</div>"]
+        L2["<div style='width:150px;text-align:center;line-height:1.35'>Trusted · VLAN20</div>"]
+        L3["<div style='width:150px;text-align:center;line-height:1.35'>DMZ · VLAN50</div>"]
+        L1 ~~~ L2 ~~~ L3
+    end
+    S2 ~~~ LEGEND
+
+    classDef core fill:#1f1f22,stroke:#6b6b70,stroke-width:1.5px,color:#f5f5f5,rx:10,ry:10
+    classDef hdr fill:transparent,stroke:transparent,color:#a8a8ad
+    classDef mgmt fill:#3d3d3a,stroke:#9a9a94,stroke-width:1.5px,color:#e8e8e3,rx:10,ry:10
+    classDef trusted fill:#0b4d3f,stroke:#3fd1a2,stroke-width:1.5px,color:#c9f5e6,rx:10,ry:10
+    classDef dmz fill:#7a2d14,stroke:#ff8a5c,stroke-width:1.5px,color:#ffd9c9,rx:10,ry:10
+
+    class NET,GW core
+    class H1,H2,H3 hdr
+    class WIFI,IOT,UOS,PDM,L1 mgmt
+    class K8TCP,K8TW,HAOS,PBS,QDEV,L2 trusted
+    class K8D1,K8D2,L3 dmz
+
+    style S1 fill:#1b1b1d,stroke:#3a3a3d,stroke-width:2px
+    style S2 fill:#1b1b1d,stroke:#3a3a3d,stroke-width:2px
+    style NAS fill:#1b1b1d,stroke:#3a3a3d,stroke-width:2px
+    style LEGEND fill:transparent,stroke:transparent
+
+    linkStyle 0 stroke:#3fd1a2,stroke-width:3px
+```
+
+## Clusters
+
+| Cluster | VLAN | Purpose |
+|---|---|---|
+| `k8s-trusted` | 20 | LAN-only services |
+| `k8s-dmz` | 50 | Public apps, via Cloudflare Tunnel |
+
+Each cluster has one node per Proxmox host. Control planes also run workloads. Since I would need three CP, as per etcd requirements, HA is currently not achieved. The addition of an offsite CP is part of my [roadmap](doc/roadmap.md). 
 
 | Node | IP | Role | Host | RAM |
 |---|---|---|---|---|
-| k8s-trusted-cp1 | 10.10.20.50 | control plane + worker (API endpoint) | goose-s1-pve (`goose`) | 12 GB |
-| k8s-trusted-w1 | 10.10.20.51 | worker | goose-s2-pve (`goose2`) | 6 GB |
-| k8s-dmz-1 | 10.10.50.50 | control plane + worker (API endpoint) | goose-s1-pve (`goose`) | 4 GB |
-| k8s-dmz-2 | 10.10.50.51 | worker | goose-s2-pve (`goose2`) | 3 GB |
+| k8s-trusted-cp1 | 10.10.20.50 | control plane | `goose` | 12 GB |
+| k8s-trusted-w1 | 10.10.20.51 | worker | `goose2` | 6 GB |
+| k8s-dmz-1 | 10.10.50.50 | control plane | `goose` | 4 GB |
+| k8s-dmz-2 | 10.10.50.51 | worker | `goose2` | 3 GB |
 
-The Proxmox node names are still `goose` and `goose2`; Terraform refers to them by those names.
 
-`k8s-dmz` can be switched off with `dmz_enabled = false` in `terraform/main.tf`. See [Turning on k8s-dmz](#turning-on-k8s-dmz).
+## Deployment
 
-## Health check
-
-```sh
-kubectl get nodes -o wide
-talosctl -n 10.10.20.50 health      # k8s-dmz: -n 10.10.50.50
-flux get kustomizations
-```
-
-Kubeconfig and talosconfig come from Terraform:
+**1. Build the VMs and clusters**
 
 ```sh
+terraform -chdir=terraform apply
 terraform -chdir=terraform output -raw trusted_kubeconfig > ~/.kube/config
-terraform -chdir=terraform output -raw trusted_talosconfig > ~/.talos/config
-# k8s-dmz: dmz_kubeconfig / dmz_talosconfig
 ```
 
-## Layout
-
-```
-kubernetes/
-  clusters/
-    k8s-trusted/           Flux entry point for k8s-trusted
-      flux-system/         Flux itself (written by flux bootstrap)
-      infrastructure.yaml  which add-ons to apply, in what order, with this cluster's IPs
-      apps.yaml            applies kubernetes/apps/ after ingress + storage are ready
-    k8s-dmz/               Flux entry point for k8s-dmz
-  infrastructure/          add-ons, shared by both clusters
-    metallb/               load balancer controller
-    metallb-config/        IP pool, set per cluster (L2 mode)
-    traefik/               ingress controller, fixed IP set per cluster
-    local-path-provisioner/ StorageClass "local-path" (node-local scratch)
-    longhorn/              default StorageClass "longhorn" (replicated), trusted only
-    longhorn-config/       backup schedule to the NAS, "longhorn-retain" class, trusted only
-    cert-manager/          issues TLS certificates, trusted only
-    cert-manager-config/   Let's Encrypt issuers, Cloudflare token, *.lab wildcard cert
-  dmz/                     k8s-dmz only (secrets use the DMZ age key)
-    cloudflared/           Cloudflare Tunnel connector
-    apps/                  public apps (hello = tunnel test page)
-  apps/                    k8s-trusted apps
-    kustomization.yaml     list of apps Flux deploys
-    hello/                 example app
-    sure/                  Sure (personal finance), https://sure.lab.felixlatulip.ca
-    pvc-test/              throwaway storage check (not deployed by Flux)
-```
-
-## Workflow
-
-`main` is protected, so every change goes through a PR:
+**2. Add the sops key** (before Flux, or secrets fail to decrypt)
 
 ```sh
-git switch -c feat/vaultwarden
-git commit -m "feat(apps): add vaultwarden"
-git push -u origin HEAD        # the Auto PR workflow opens the PR
-```
-
-CI runs on the push. Once the 6 checks pass, merge the PR. Flux then deploys from `main` to both clusters.
-
-### Commit messages
-
-[Conventional Commits](https://www.conventionalcommits.org): `<type>(<scope>): <description>`, with a header of 72 chars max and a lowercase scope.
-
-| Type | For |
-|---|---|
-| `feat` | something new: an app, an add-on, a capability |
-| `fix` | fixing something broken |
-| `chore` | upkeep, dependency bumps (Renovate uses `chore(deps)`) |
-| `refactor` | same result, restructured |
-| `docs` / `ci` / `build` / `test` / `perf` / `style` / `revert` | what they say |
-
-Typical scopes: `terraform`, `talos`, `flux`, `metallb`, `traefik`, `storage`, `apps`, `dmz`, `ci`. Add `!` for breaking changes, e.g. `fix(talos)!: …`.
-
-The **Commit messages** CI job checks every commit on the branch. To get the same check at commit time, enable the local hook once per clone:
-
-```sh
-git config core.hooksPath scripts/git-hooks
-```
-
-## Deploying changes
-
-Flux watches `main`. Merge a PR, and Flux applies the change within a minute.
-
-```sh
-flux reconcile kustomization flux-system --with-source   # apply now instead of waiting
-flux get kustomizations                                  # status of each layer
-```
-
-Deleting a file from git deletes its objects from the cluster, because every Flux Kustomization has `prune: true`.
-
-Both clusters use the same folders under `kubernetes/infrastructure/`. Values that differ per cluster are written as `${VAR}` in the manifest and set in that cluster's `infrastructure.yaml` under `postBuild.substitute`:
-
-| Variable | k8s-trusted | k8s-dmz |
-|---|---|---|
-| `LB_RANGE` (MetalLB pool) | 10.10.20.200-10.10.20.220 | 10.10.50.200-10.10.50.220 |
-| `TRAEFIK_IP` | 10.10.20.201 | 10.10.50.201 |
-
-### Adding an app
-
-1. Create `kubernetes/apps/<name>/` with the manifests and a `kustomization.yaml`. Copy `hello/` as a starting point.
-2. Add `<name>` to `kubernetes/apps/kustomization.yaml`.
-3. To reach it from the LAN, add an `Ingress`. Traefik is the default ingress class, so no `ingressClassName` is needed.
-4. Commit and push.
-
-## Networking
-
-- **VLANs:** k8s-trusted on VLAN 20 (`10.10.20.0/24`, untagged on `vmbr0`). k8s-dmz on VLAN 50 (`10.10.50.0/24`); its VMs tag their own traffic, so both host bridges must be VLAN-aware and carry 50.
-- **LoadBalancer IPs:** MetalLB hands out `10.10.20.200`–`10.10.20.220` (trusted) and `10.10.50.200`–`10.10.50.220` (DMZ).
-- **Ingress:** Traefik is at `10.10.20.201` (trusted) and `10.10.50.201` (DMZ), on ports 80 and 443. On 443 the trusted one serves the `*.lab.felixlatulip.ca` wildcard cert (see [Certificates](#certificates)).
-- **Hostnames:** `<app>.lab.felixlatulip.ca`, e.g. https://hello.lab.felixlatulip.ca. Until DNS points there, use `<app>.10.10.20.201.sslip.io` over HTTP.
-- **Traefik dashboard:** `kubectl -n traefik port-forward deploy/traefik 8080`, then http://localhost:8080/dashboard/
-
-## Storage
-
-**`longhorn`** (k8s-trusted only) is the default StorageClass. Each volume is kept on both nodes (2 replicas), one per Proxmox host, so if one goes down its pods can restart on the other with their data.
-
-- Data lives on a dedicated 50 GB disk per node (`data_disk_size` in `terraform/main.tf`), mounted by Talos at `/var/mnt/longhorn` (`patches/data-disk/longhorn-volume.yaml`, applied to nodes with a data disk). With 2 replicas, usable space is about one disk.
-- Talos needs the `iscsi-tools` and `util-linux-tools` extensions for Longhorn; they're in the image list in `terraform/main.tf`.
-- UI (no login, so it isn't exposed): `kubectl -n longhorn-system port-forward svc/longhorn-frontend 8000:80`, then http://localhost:8000
-
-**Backups** go to the Unraid NAS over NFS: `nfs://10.10.20.3:/mnt/user/longhorn`. Every volume is backed up daily (7 kept) and weekly on Sundays (4 kept), from `longhorn-config/recurring-jobs.yaml`. Backups are incremental and survive deleting the volume or the whole cluster. To restore: Longhorn UI → Backup → pick a backup → Restore, then point a PVC at the restored volume.
-
-**`longhorn-retain`** is the same, but deleting the PVC keeps the volume (it shows as Released in the Longhorn UI). Use it for data that can't be rebuilt from git, and add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation so Flux never deletes the PVC either. To reattach a released volume: Longhorn UI → Volume → Create PV/PVC.
-
-**`local-path`** is there for scratch data on k8s-trusted, and is the only storage on k8s-dmz: set `storageClassName: local-path`. Its volumes are directories under `/var/mnt/local-path-provisioner` on one node's system disk, aren't replicated or backed up, and share the ~19 GB EPHEMERAL partition with images and logs.
-
-## Certificates
-
-k8s-trusted is LAN-only, but its certs are real Let's Encrypt ones, trusted by every device with no setup. cert-manager gets them with a **DNS-01** challenge: it proves ownership of `felixlatulip.ca` by writing a TXT record through the Cloudflare API, so nothing has to be reachable from the internet. Its self-check that the TXT record is live goes over DNS-over-HTTPS to 1.1.1.1. The UniFi gateway intercepts every port-53 query and answers `*.lab` from its local record, which would hide the challenge.
-
-- **One wildcard cert** for `*.lab.felixlatulip.ca`, Traefik's default certificate. It's in `infrastructure/cert-manager-config/wildcard.yaml`. Any Ingress host under `lab.felixlatulip.ca` gets valid HTTPS on 443 without a `tls` section. App names stay out of public Certificate Transparency logs; only the wildcard appears there.
-- **Issuers:** `letsencrypt-prod` for real certs, and `letsencrypt-staging` for testing changes (untrusted certs, higher rate limits).
-- **Renewal** is automatic, about 30 days before the 90-day expiry. Check status with `kubectl get certificates -A`.
-- **Cloudflare token** lives in `cert-manager-config/cloudflare-api-token.sops.yaml`. It's scoped to Zone:DNS:Edit and Zone:Zone:Read on `felixlatulip.ca` only. Rotate it with `sops <file>`.
-
-**DNS for app names.** Point `*.lab.felixlatulip.ca` at Traefik (`10.10.20.201`) in one of two ways:
-- a local DNS record on the UniFi gateway: LAN-only, preferred
-- a DNS-only (grey cloud) record in Cloudflare: works everywhere, but publishes the private IP
-
-Until then, the `sslip.io` hostnames work over plain HTTP.
-
-## Public apps (k8s-dmz)
-
-Public apps run on k8s-dmz and are reached only through a **Cloudflare Tunnel**: cloudflared (2 replicas, `kubernetes/dmz/cloudflared/`) opens outbound connections to Cloudflare, so no router ports are open. Cloudflare terminates HTTPS and forwards to the DMZ Traefik, which routes by hostname.
-
-The tunnel `k8s-dmz` is managed in the Cloudflare Zero Trust dashboard (Networks → Tunnels). To publish an app:
-
-1. Add it under `kubernetes/dmz/apps/<name>/` with an Ingress for `<name>.felixlatulip.ca`, and list it in `kubernetes/dmz/apps/kustomization.yaml`. No `tls` section.
-2. In the tunnel's public hostnames, add `<name>.felixlatulip.ca` → `HTTP` → `traefik.traefik.svc.cluster.local`. Cloudflare creates the DNS record.
-
-The tunnel token is in `dmz/cloudflared/tunnel-token.sops.yaml`. To rotate it, refresh the token in the dashboard, copy it, and re-create the file:
-
-```sh
-kubectl create secret generic tunnel-token -n cloudflared --from-literal=token="$(pbpaste)" \
-  --dry-run=client -o yaml > kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
-sops -e -i kubernetes/dmz/cloudflared/tunnel-token.sops.yaml
-```
-
-## Sure
-
-[Sure](https://github.com/we-promise/sure) (personal finance) runs in namespace `sure` on k8s-trusted, LAN only: https://sure.lab.felixlatulip.ca. It came from LXC 105 on goose (Docker Compose) on 2026-11-01.
-
-- **Pods:** `sure` (Rails web + Sidekiq worker in one pod, since both need the uploads volume), `sure-db` (postgres:16.14), `sure-redis` (redis:8.8.0).
-- **Data:** PVCs `sure-db`, `sure-storage` (uploads) and `sure-redis` are on `longhorn-retain` and never pruned by Flux.
-- **Secrets:** `secret.sops.yaml` holds the Postgres login, `SECRET_KEY_BASE` and the three `ACTIVE_RECORD_ENCRYPTION_*` keys. **Those keys encrypt fields in the database: if they're lost or changed, that data can't be read.** Keep a copy in your password manager.
-  `SECRET_KEY_BASE` also encrypts API keys saved in sure's settings (OpenAI, Anthropic, Twelve Data, ...), so once any are saved, changing it makes them unreadable. Otherwise it only signs logins, and a new one just logs everyone out.
-- **Rotating the Postgres password:** change `POSTGRES_PASSWORD` with `sops`, merge, wait for Flux to update the Secret, then set it in Postgres and restart the app:
-
-  ```sh
-  kubectl -n sure get secret sure-env -o jsonpath='{.data.POSTGRES_PASSWORD}' | base64 -d |
-    kubectl -n sure exec -i sure-db-0 -- sh -c 'read -r p; echo "ALTER USER CURRENT_USER PASSWORD :'\''p'\'';" | psql -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v p="$p"'
-  kubectl -n sure rollout restart deploy/sure
-  ```
-- **Backups**, three layers:
-  1. `sure-db-dump` CronJob: `pg_dump` every night at 07:00 UTC into the `sure-db-dumps` PVC, 14 days kept. Each dump is test-read before it's kept.
-  2. Longhorn backs up every sure volume (dumps included) to the NAS daily at 08:00 UTC.
-  3. The pre-migration copy on the NAS: `data/sure-migration-20261101/` (vzdump of LXC 105, Postgres dumps, row counts). The vzdump includes the old `.env`, so it holds the encryption keys next to the data: guard it like the data.
-- **Upgrading:** change the image tag and digest in `app.yaml` (both containers). Take a manual dump first: `kubectl -n sure create job --from=cronjob/sure-db-dump pre-upgrade`. The app runs its migrations on start. Postgres stays on 16.x: a major version needs a dump and restore.
-
-Restore the database from a nightly dump:
-
-1. Set `replicas: 0` in `app.yaml`, push, and wait for the `sure` pod to stop.
-2. Start a pod that has the dumps and the DB login, then restore into it:
-
-   ```sh
-   kubectl -n sure apply -f - <<'EOF'
-   apiVersion: v1
-   kind: Pod
-   metadata: { name: restore }
-   spec:
-     securityContext: { runAsUser: 999, runAsGroup: 999, runAsNonRoot: true, seccompProfile: { type: RuntimeDefault } }
-     containers:
-       - name: pg
-         image: postgres:16.14
-         command: ["sleep", "infinity"]
-         env:
-           - { name: PGHOST, value: sure-db }
-           - { name: PGUSER, valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_USER } } }
-           - { name: PGPASSWORD, valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_PASSWORD } } }
-           - { name: PGDATABASE, valueFrom: { secretKeyRef: { name: sure-env, key: POSTGRES_DB } } }
-         securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] } }
-         volumeMounts: [{ name: dumps, mountPath: /dumps }]
-     volumes: [{ name: dumps, persistentVolumeClaim: { claimName: sure-db-dumps } }]
-   EOF
-   kubectl -n sure exec restore -- ls -lh /dumps
-   kubectl -n sure exec restore -- pg_restore --clean --if-exists --exit-on-error -d sure_production /dumps/<file>.dump
-   kubectl -n sure delete pod restore
-   ```
-
-   The dumps volume attaches to one node at a time, so the restore fails if the nightly job is running at the same moment.
-3. Set `replicas: 1` again and push.
-
-## Secrets
-
-Secrets (k8s-trusted only) are committed encrypted with [sops](https://github.com/getsops/sops) + [age](https://age-encryption.org), and Flux decrypts them in the cluster. Any file named `*.sops.yaml` under `kubernetes/` is encrypted with the public key in `.sops.yaml`. Only `data`/`stringData` values get encrypted, so names and keys stay readable.
-
-```sh
-sops -e -i kubernetes/apps/<app>/secret.sops.yaml   # encrypt a new Secret before committing
-sops kubernetes/apps/<app>/secret.sops.yaml         # edit in $EDITOR (decrypts, re-encrypts on save)
-sops -d kubernetes/apps/<app>/secret.sops.yaml      # print decrypted
-```
-
-Then list the file in the app's `kustomization.yaml` like any other manifest. `hello/secret.sops.yaml` is an example. CI fails if a `*.sops.yaml` file is committed unencrypted.
-
-k8s-dmz has its **own age key**. `.sops.yaml` encrypts files under `kubernetes/dmz/` to it, and only that key is in k8s-dmz's `sops-age` Secret, so a compromised DMZ cluster can't read trusted secrets. Both private keys are in the same `keys.txt` on the Mac (keep both in the password manager). To recreate k8s-dmz's Secret, put only the DMZ key in it (the one under the `# k8s-dmz` comment):
-
-```sh
-grep -A2 '# k8s-dmz' "$HOME/Library/Application Support/sops/age/keys.txt" | grep AGE-SECRET-KEY > /tmp/dmz.agekey
-kubectl --context admin@k8s-dmz -n flux-system create secret generic sops-age --from-file=age.agekey=/tmp/dmz.agekey
-rm /tmp/dmz.agekey
-```
-
-**The private key** is in `~/Library/Application Support/sops/age/keys.txt` on the Mac, and in the cluster as Secret `flux-system/sops-age`. It isn't in git. Keep a copy in a password manager. Without it, nothing encrypted can be decrypted. After rebuilding the cluster, recreate the Secret before Flux syncs:
-
-```sh
+kubectl create namespace flux-system
 kubectl -n flux-system create secret generic sops-age \
   --from-file=age.agekey="$HOME/Library/Application Support/sops/age/keys.txt"
 ```
 
-## Talos 1.14 notes
-
-- Kubelet settings live in the `KubeletConfig` document. Patching `.machine.kubelet` fails with `kubelet config is already set in v1alpha1 config`, and `extraMounts` no longer exists. Host paths for pods go under `/var/mnt` as user volumes.
-- Install settings live in `UnattendedInstallConfig`, not `.machine.install`.
-- A control plane that runs workloads loses its `NoSchedule` taint and its `exclude-from-external-load-balancers` label (so MetalLB announces from it) through the `KubeNodeConfig` document. `.cluster.allowSchedulingOnControlPlanes` is rejected next to it. The module applies `patches/schedulable-controlplane/` when `allow_scheduling_on_control_planes = true`.
-- Talos enforces the `baseline` Pod Security level. Namespaces whose pods need host access (`metallb-system`, `local-path-storage`, `longhorn-system`) are labeled `pod-security.kubernetes.io/enforce: privileged`.
-- System extensions are baked into the image. Changing the `extensions` list in `terraform/main.tf` changes the installer image; after `terraform apply`, roll each node with `talosctl -n <ip> upgrade --image "$(terraform -chdir=terraform output -raw installer_image)"`.
-- Check a config patch before applying it: `talosctl validate --config <file> --mode metal`.
-
-## Rebuilding a cluster
-
-Everything in a cluster comes back from git, except Longhorn data (restore it from the NAS backups) and the secrets below.
-
-1. Create the VMs and Talos: `terraform -chdir=terraform apply`. To start over, first `terraform -chdir=terraform destroy -target=module.trusted` (new machine secrets, new etcd).
-2. Write the kubeconfig and talosconfig (see [Health check](#health-check)).
-3. k8s-trusted only: recreate the `sops-age` Secret (see [Secrets](#secrets)).
-4. Bootstrap Flux with a short-lived GitHub token (fine-grained, this repo only, Contents + Administration read/write). `flux-system/` is already in git, so bootstrap only adds a deploy key and doesn't push to `main`:
-
-   ```sh
-   export GITHUB_TOKEN=<token>
-   flux bootstrap github --owner=VypperFO --repository=homelab --personal \
-     --branch=main --path=kubernetes/clusters/k8s-trusted   # or k8s-dmz
-   ```
-
-   Then delete the token. The deploy key stays.
-
-### Turning on k8s-dmz
-
-1. In UniFi: create VLAN 50 (`10.10.50.0/24`, gateway `10.10.50.1`, DHCP range clear of `.50`–`.51` and `.200`–`.220`) and tag it on the switch ports of both Proxmox hosts. Block DMZ → other VLANs in the firewall.
-2. Set `dmz_enabled = true` in `terraform/main.tf` and apply. This also makes both host bridges carry VLAN 50 (`proxmox.tf`).
-3. Bootstrap Flux with `--path=kubernetes/clusters/k8s-dmz` (step 4 above).
-
-## Experiments
-
-These are for trying things out. Anything managed by Flux gets reverted to what's in git on the next sync.
+**3. Bootstrap Flux** (with a short-lived `GITHUB_TOKEN`)
 
 ```sh
-kubectl get pods -o wide                  # hello pods spread across cp1/w1
-kubectl delete pod <one-of-them>          # watch a replacement appear
-kubectl apply -f kubernetes/apps/pvc-test/ && kubectl logs pvc-test
-kubectl delete -f kubernetes/apps/pvc-test/
+flux bootstrap github --owner=folatulip --repository=homelab --personal \
+  --branch=main --path=kubernetes/clusters/k8s-trusted
 ```
 
-To change the number of hello pods, edit `replicas` in `kubernetes/apps/hello/hello.yml` and push. Running `kubectl scale` would get reverted by Flux.
+For k8s-dmz, use the `dmz_*` outputs, the DMZ key only, and `--path=kubernetes/clusters/k8s-dmz`. Details in [doc/rebuild.md](doc/rebuild.md).
+
+## Workflow
+
+Flux watches `main`. Merge a PR and it's live within a minute. Delete a file and Flux deletes it from the cluster.
+
+```sh
+flux reconcile kustomization flux-system --with-source   # sync now
+flux get kustomizations                                  # status
+```
+
+Per-cluster values (`LB_RANGE`, `TRAEFIK_IP`) live in each cluster's `infrastructure.yaml`.
+
+## Adding an App
+
+```sh
+app=myapp
+cp -r doc/templates/helm-app kubernetes/apps/$app
+sed -i '' "s/APP_NAME/$app/g" kubernetes/apps/$app/*.yaml
+```
+
+1. Fill in the chart and `values:` in `helmrelease.yaml`.
+2. Encrypt the secret: `sops -e -i kubernetes/apps/$app/secret.sops.yaml`.
+3. Add `$app` to `kubernetes/apps/kustomization.yaml`.
+4. Open a PR.
+
+> Full guide: [doc/adding-an-app.md](doc/adding-an-app.md).
+
+## Docs
+
+| Doc | Covers |
+|---|---|
+| [Adding an app](doc/adding-an-app.md) | Helm template, step by step |
+| [Operations](doc/operations.md) | health checks, kubeconfig |
+| [Workflow](doc/workflow.md) | PRs, CI, commit rules |
+| [Networking](doc/networking.md) | VLANs, IPs, certs, tunnel |
+| [Storage](doc/storage.md) | Longhorn, NAS backups |
+| [Secrets](doc/secrets.md) | sops + age, key recovery |
+| [Talos](doc/talos.md) | 1.14 quirks, upgrades |
+| [Rebuild](doc/rebuild.md) | disaster recovery |
+| [Sure](doc/runbooks/sure.md) | backups, restore, upgrades |
+
+## Roadmap
+
+Full roadmap available here: [doc/roadmap.md](doc/roadmap.md).
+
+## Thanks and Gratitudes
+
+- [Serge Latulippe](https://github.com/happytechca), for all the invaluable knowledge and equipment that he provided over the years
+- [Eliza Wang](https://github.com/wca-eliza), for not strangling me over the pile of networking equipment taking over our closet
+- [bjw-s helm charts](https://github.com/bjw-s-labs/helm-charts), for app-template inspirations
+- [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons), for the diagram icons
+- [kubesearch.dev](https://kubesearch.dev), for finding how others deploy the same apps
+
+## Contributing
+
+Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please see [contributing guide](https://github.com/folatulip/homelab?tab=contributing-ov-file#contribution-guidelines) for more information.
+Please also read the [code of conduct](https://github.com/folatulip/homelab?tab=coc-ov-file) and [security policy](https://github.com/folatulip/homelab?tab=security-ov-file).
+Thanks again!
+
+## Unofficial Wiki
+
+[![DeepWiki](https://img.shields.io/badge/deepwiki-purple?label=&logo=deepl&style=for-the-badge&logoColor=white)](https://deepwiki.com/folatulip/homelab)
+
+## License
+
+Distributed under the MIT License. See [license page](https://github.com/folatulip/homelab/blob/main/LICENSE) or `LICENSE.txt` for more information.
+
+<!-- SHIELD LINKS -->
+[terraform-shield]: https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white
+[k8s-shield]: https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white
+[proxmox-shield]: https://img.shields.io/badge/Proxmox-E57000?style=for-the-badge&logo=proxmox&logoColor=white
+[talos-shield]: https://img.shields.io/badge/Talos-e43245?style=for-the-badge&logo=talos&logoColor=white
+[flux-shield]: https://img.shields.io/badge/Flux-5468FF?style=for-the-badge&logo=flux&logoColor=white
