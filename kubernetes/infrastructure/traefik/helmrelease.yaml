@@ -1,0 +1,54 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: traefik
+      version: 42.1.0 # Traefik v3.7.15
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  # All values: https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+  values:
+    deployment:
+      replicas: 2
+    # One replica per node, so losing a node doesn't take ingress down.
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: traefik
+            app.kubernetes.io/instance: traefik-traefik
+    # Dashboard on :8080, not exposed by the Service; reach it with port-forward.
+    api:
+      insecure: true
+    log:
+      level: INFO
+    accessLog:
+      enabled: true
+    global:
+      checkNewVersion: false
+      sendAnonymousUsage: false
+    service:
+      annotations:
+        # Set per cluster (postBuild.substitute in kubernetes/clusters/<cluster>/).
+        metallb.io/loadBalancerIPs: ${TRAEFIK_IP}
+      spec:
+        externalTrafficPolicy: Local # keeps real client IPs in access logs
+    resources:
+      requests: { cpu: 100m, memory: 64Mi }
+      limits: { memory: 256Mi }

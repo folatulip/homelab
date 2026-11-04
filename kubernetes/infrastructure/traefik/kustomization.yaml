@@ -1,26 +1,9 @@
-# Traefik ingress controller, plain manifests (no Helm).
-# Upstream CRDs + RBAC are pinned to the same release as the image in traefik.yaml.
+# Traefik ingress controller, installed with the official Helm chart.
+# The CRDs come from the chart (crds: CreateReplace). They're marked
+# prune: disabled on the cluster, so Flux never deletes them.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://raw.githubusercontent.com/traefik/traefik/v3.7.15/docs/content/reference/dynamic-configuration/kubernetes-crd-definition-v1.yml
-  - https://raw.githubusercontent.com/traefik/traefik/v3.7.15/docs/content/reference/dynamic-configuration/kubernetes-crd-rbac.yml
   - namespace.yaml
-  - traefik.yaml
-patches:
-  # Upstream binds the ClusterRole to a ServiceAccount in "default"; ours lives in "traefik".
-  - target:
-      kind: ClusterRoleBinding
-      name: traefik-ingress-controller
-    patch: |-
-      - op: replace
-        path: /subjects/0/namespace
-        value: traefik
-  # Flux never deletes the Traefik CRDs, even if they leave this folder.
-  # Deleting a CRD deletes every resource of that kind (like our TLSStore).
-  - target:
-      kind: CustomResourceDefinition
-    patch: |-
-      - op: add
-        path: /metadata/annotations/kustomize.toolkit.fluxcd.io~1prune
-        value: disabled
+  - helmrepository.yaml
+  - helmrelease.yaml
