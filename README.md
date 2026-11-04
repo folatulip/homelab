@@ -72,7 +72,7 @@ config:
 ---
 flowchart TB
     NET["<div style='width:170px;text-align:center;line-height:1.35'><b>🌐 Internet</b></div>"]
-    GW["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/unifi.png' style='width:30px;height:30px;max-width:30px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>UniFi Gateway Fiber</b></div>"]
+    GW["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/unifi.png' style='width:30px;height:30px;max-width:30px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>Router</b></div>"]
     WIFI["<div style='width:150px;text-align:center;line-height:1.35'><b>📶 VLAN10</b><br/>Wi-Fi</div>"]
     IOT["<div style='width:150px;text-align:center;line-height:1.35'><b>💡 VLAN30</b><br/>IoT</div>"]
 
@@ -91,7 +91,7 @@ flowchart TB
         H3 ~~~ PBS ~~~ QDEV
     end
 
-    subgraph S2["<b>goose-s2-pve</b>"]
+    subgraph S2["<b>goose2</b>"]
         direction TB
         H2["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/proxmox.png' style='width:22px;height:22px;max-width:22px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span>i5-6500T · 20GB · 2.5GbE</div>"]
         HAOS["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/home-assistant.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>HAOS</b><br/><small>VM · 3GB</small></div>"]
@@ -102,7 +102,7 @@ flowchart TB
         H2 ~~~ HAOS ~~~ UOS ~~~ PDM ~~~ K8TW ~~~ K8D2
     end
 
-    subgraph S1["<b>goose-s1-pve</b>"]
+    subgraph S1["<b>goose</b>"]
         direction TB
         H1["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/proxmox.png' style='width:22px;height:22px;max-width:22px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span>i5-8600K · 24GB · 10GbE</div>"]
         K8TCP["<div style='width:200px;text-align:center;line-height:1.35'><span style='display:flex;justify-content:center;gap:6px;margin-bottom:4px'><img src='https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/kubernetes.png' style='width:26px;height:26px;max-width:26px;object-fit:contain;display:inline;vertical-align:middle;margin:0 3px' /></span><b>k8s-trusted-cp1</b><br/><small>CP + worker · 12GB</small></div>"]
@@ -146,7 +146,7 @@ flowchart TB
 | `k8s-trusted` | 20 | LAN-only services |
 | `k8s-dmz` | 50 | Public apps, via Cloudflare Tunnel |
 
-Each cluster has one node per Proxmox host, so either host can go down. Control planes also run workloads.
+Each cluster has one node per Proxmox host. Control planes also run workloads. Since I would need three CP, as per etcd requirements, HA is currently not achieved. The addition of an offsite CP is part of my [roadmap](doc/roadmap.md). 
 
 | Node | IP | Role | Host | RAM |
 |---|---|---|---|---|
@@ -155,51 +155,6 @@ Each cluster has one node per Proxmox host, so either host can go down. Control 
 | k8s-dmz-1 | 10.10.50.50 | control plane | `goose` | 4 GB |
 | k8s-dmz-2 | 10.10.50.51 | worker | `goose2` | 3 GB |
 
-## Directories
-
-```sh
-📁 .github/workflows                # CI checks + auto-PR on push
-📁 doc                              # runbooks and how-tos
-│   └── 📁 templates/helm-app       # starting point for a new Helm app
-📁 scripts
-├── 📁 ci                           # validate Talos/Kubernetes, lint commits
-├── 📁 git-hooks                    # local commit-msg hook
-└── 📁 readme                       # generates the topology diagram
-📁 terraform                        # Proxmox VMs + Talos clusters
-├── 📄 main.tf                      # clusters, node sizes, Talos version, dmz_enabled
-├── 📄 proxmox.tf                   # Proxmox host settings: network, VLANs, storage
-└── 📁 modules
-    ├── 📁 proxmox-base             # per-host network/DNS/time, NAS storages
-    ├── 📁 proxmox-vm               # one VM, cloned from a template
-    ├── 📁 talos-image              # Talos boot ISO + extensions (Image Factory)
-    └── 📁 talos-cluster            # VMs + Talos bootstrap for one cluster
-        └── 📁 patches              # Talos machine config patches
-📁 kubernetes
-├── 📁 clusters                     # Flux entry points, one per cluster
-│   ├── 📁 k8s-trusted
-│   │   ├── 📁 flux-system          # Flux itself (written by flux bootstrap)
-│   │   ├── 📄 infrastructure.yaml  # which add-ons to apply, in what order, with this cluster's IPs
-│   │   └── 📄 apps.yaml            # applies apps/ after ingress + storage are ready
-│   └── 📁 k8s-dmz                  # same layout, points at dmz/
-├── 📁 infrastructure               # add-ons, shared by both clusters
-│   ├── 📁 metallb                  # load balancer controller
-│   ├── 📁 metallb-config           # IP pool, set per cluster (L2 mode)
-│   ├── 📁 traefik                  # ingress controller, fixed IP per cluster
-│   ├── 📁 local-path-provisioner   # StorageClass "local-path" (node-local scratch)
-│   ├── 📁 longhorn                 # default StorageClass "longhorn" (replicated), trusted only
-│   ├── 📁 longhorn-config          # NAS backup schedule, "longhorn-retain" class, trusted only
-│   ├── 📁 cert-manager             # issues TLS certificates, trusted only
-│   └── 📁 cert-manager-config      # Let's Encrypt issuers, Cloudflare token, *.lab wildcard cert
-├── 📁 dmz                          # k8s-dmz only (secrets use the DMZ age key)
-│   ├── 📁 cloudflared              # Cloudflare Tunnel connector
-│   └── 📁 apps                     # public apps (hello = tunnel test page)
-└── 📁 apps                         # k8s-trusted apps
-    ├── 📄 kustomization.yaml       # list of apps Flux deploys
-    ├── 📁 hello                    # example app
-    ├── 📁 sure                     # personal finance
-    ├── 📁 vaultwarden              # password manager (Helm)
-    └── 📁 pvc-test                 # throwaway storage check (not deployed by Flux)
-```
 
 ## Deployment
 
@@ -267,9 +222,15 @@ sed -i '' "s/APP_NAME/$app/g" kubernetes/apps/$app/*.yaml
 | [Rebuild](doc/rebuild.md) | disaster recovery |
 | [Sure](doc/runbooks/sure.md) | backups, restore, upgrades |
 
+## Roadmap
+
+Full roadmap available here: [doc/roadmap.md](doc/roadmap.md).
+
 ## Thanks and Gratitudes
 
-- [bjw-s helm charts](https://github.com/bjw-s-labs/helm-charts), for app-template
+- [Serge Latulippe](https://github.com/happytechca), for all the invaluable knowledge and equipment that he provided over the years
+- [Eliza Wang](https://github.com/wca-eliza), for not strangling me over the pile of networking equipment taking over our closet
+- [bjw-s helm charts](https://github.com/bjw-s-labs/helm-charts), for app-template inspirations
 - [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons), for the diagram icons
 - [kubesearch.dev](https://kubesearch.dev), for finding how others deploy the same apps
 
@@ -283,7 +244,7 @@ Thanks again!
 
 ## Unofficial Wiki
 
-[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/folatulip/homelab)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/folatulip/homelab)
 
 ## License
 
