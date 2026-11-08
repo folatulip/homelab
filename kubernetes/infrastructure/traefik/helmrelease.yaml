@@ -24,6 +24,23 @@ spec:
   values:
     deployment:
       replicas: 2
+      # Routes to things outside the cluster (e.g. Proxmox) go in the
+      # traefik-dynamic ConfigMap. It's optional, so a cluster without it
+      # (k8s-dmz) just gets an empty folder.
+      additionalVolumes:
+        - name: traefik-dynamic
+          configMap:
+            name: traefik-dynamic
+            optional: true
+    additionalVolumeMounts:
+      - name: traefik-dynamic
+        mountPath: /etc/traefik/dynamic
+        readOnly: true
+    # Not the chart's providers.file, since that one would ship the same
+    # routes to both clusters.
+    additionalArguments:
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
     # One replica per node, so losing a node doesn't take ingress down.
     topologySpreadConstraints:
       - maxSkew: 1

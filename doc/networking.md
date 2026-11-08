@@ -6,6 +6,7 @@
 - **LoadBalancer IPs:** MetalLB hands out `10.10.20.200`–`10.10.20.220` (trusted) and `10.10.50.200`–`10.10.50.220` (DMZ).
 - **Ingress:** Traefik is at `10.10.20.201` (trusted) and `10.10.50.201` (DMZ), on ports 80 and 443. On 443 the trusted one serves the `*.lab.felixlatulip.ca` wildcard cert (see [Certificates](#certificates)).
 - **Hostnames:** `<app>.lab.felixlatulip.ca`, e.g. https://hello.lab.felixlatulip.ca. Until DNS points there, use `<app>.10.10.20.201.sslip.io` over HTTP.
+- **Proxmox UI:** https://pve.lab.felixlatulip.ca, load balanced by Traefik across `goose` (`10.10.20.2`) and `goose2` (`10.10.20.4`), both on `:8006`. A node that fails its health check (every 10s) is dropped until it recovers. A sticky cookie keeps each browser on one node, so consoles don't break. The route is in `apps/trusted/proxmox/` and is read by Traefik's file provider, not an IngressRoute: only ExternalName services can be health checked through the CRDs.
 - **Traefik dashboard:** `kubectl -n traefik port-forward deploy/traefik 8080`, then http://localhost:8080/dashboard/
 
 ## Certificates
