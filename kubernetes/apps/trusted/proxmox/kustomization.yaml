@@ -1,0 +1,9 @@
+# Proxmox web UI at https://pve.lab.felixlatulip.ca, load balanced by Traefik
+# across both hosts. It's a ConfigMap read by Traefik's file provider (see
+# infrastructure/traefik/helmrelease.yaml), because IngressRoutes can't
+# health check plain IPs outside the cluster.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: traefik
+resources:
+  - traefik-dynamic.yaml

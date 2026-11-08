@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-dynamic
+  namespace: traefik
+data:
+  # Traefik picks up changes on its own, no restart needed.
+  pve.yaml: |
+    http:
+      routers:
+        pve:
+          rule: Host(`pve.lab.felixlatulip.ca`)
+          entryPoints: [websecure]
+          tls: {} # wildcard cert from the default TLSStore
+          service: pve
+        # Plain HTTP just redirects, so the login never goes out unencrypted.
+        pve-http:
+          rule: Host(`pve.lab.felixlatulip.ca`)
+          entryPoints: [web]
+          middlewares: [pve-https]
+          service: pve
+
+      middlewares:
+        pve-https:
+          redirectScheme:
+            scheme: https
+            permanent: true
+
+      services:
+        pve:
+          loadBalancer:
+            servers:
+              - url: https://10.10.20.2:8006 # goose-s1-pve
+              - url: https://10.10.20.4:8006 # goose-s2-pve
+            # A node that stops answering is taken out of rotation, and put
+            # back once it's healthy again (reboots, updates, etc.).
+            healthCheck:
+              path: /
+              interval: 10s
+              timeout: 3s
+            # Keep each browser on one node, so the noVNC/shell consoles
+            # don't break by bouncing between hosts. If that node goes down,
+            # Traefik moves the browser to the other one.
+            sticky:
+              cookie:
+                name: pve_node
+                secure: true
+                httpOnly: true
+                sameSite: lax
+            serversTransport: pve
+
+      serversTransports:
+        pve:
+          # Proxmox uses its own self-signed certs on :8006.
+          insecureSkipVerify: true
