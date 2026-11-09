@@ -4,7 +4,7 @@
 
 ```sh
 kubectl get nodes -o wide
-talosctl -n 10.10.20.50 health      # k8s-dmz: -n 10.10.50.50
+talosctl -n 10.10.20.50 health
 flux get kustomizations
 ```
 
@@ -13,7 +13,6 @@ Kubeconfig and talosconfig come from Terraform:
 ```sh
 terraform -chdir=terraform output -raw trusted_kubeconfig > ~/.kube/config
 terraform -chdir=terraform output -raw trusted_talosconfig > ~/.talos/config
-# k8s-dmz: dmz_kubeconfig / dmz_talosconfig
 ```
 
 ## Deploying changes
@@ -27,12 +26,12 @@ flux get kustomizations                                  # status of each layer
 
 Deleting a file from git deletes its objects from the cluster, because every Flux Kustomization has `prune: true`.
 
-Both clusters use the same folders under `kubernetes/infrastructure/`. Values that differ per cluster are written as `${VAR}` in the manifest and set in that cluster's `infrastructure.yaml` under `postBuild.substitute`:
+k8s-trusted and k8s-geese use the same folders under `kubernetes/infrastructure/`. Values that differ per cluster are written as `${VAR}` in the manifest and set in that cluster's `infrastructure.yaml` under `postBuild.substitute`:
 
-| Variable | k8s-trusted | k8s-dmz |
+| Variable | k8s-trusted | k8s-geese |
 |---|---|---|
-| `LB_RANGE` (MetalLB pool) | 10.10.20.200-10.10.20.220 | 10.10.50.200-10.10.50.220 |
-| `TRAEFIK_IP` | 10.10.20.201 | 10.10.50.201 |
+| `LB_RANGE` (MetalLB pool) | 10.10.20.200-10.10.20.220 | none, Cilium pool in `cilium-config/` |
+| `TRAEFIK_IP` | 10.10.20.201 | 10.10.20.221 |
 
 ## Experiments
 

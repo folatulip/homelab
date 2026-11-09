@@ -98,16 +98,14 @@ flowchart TB
         UOS["<div style='width:200px;text-align:center;line-height:1.35'><b>UniFi OS Server</b><br/><small>VM · 3GB</small></div>"]
         PDM["<div style='width:200px;text-align:center;line-height:1.35'><b>PDM</b><br/><small>LXC · 1GB</small></div>"]
         K8TW["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-w1</b><br/><small>Worker · 6GB</small></div>"]
-        K8D2["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-dmz-2</b><br/><small>Worker · 3GB</small></div>"]
-        H2 ~~~ HAOS ~~~ UOS ~~~ PDM ~~~ K8TW ~~~ K8D2
+        H2 ~~~ HAOS ~~~ UOS ~~~ PDM ~~~ K8TW
     end
 
     subgraph S1["<b>goose</b>"]
         direction TB
         H1["<div style='width:200px;text-align:center;line-height:1.35'>i5-8600K · 24GB · 10GbE</div>"]
         K8TCP["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-cp1</b><br/><small>CP + worker · 12GB</small></div>"]
-        K8D1["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-dmz-1</b><br/><small>CP + worker · 4GB</small></div>"]
-        H1 ~~~ K8TCP ~~~ K8D1
+        H1 ~~~ K8TCP
     end
 
     subgraph LEGEND[" "]
@@ -129,7 +127,7 @@ flowchart TB
     class H1,H2,H3 hdr
     class WIFI,IOT,UOS,PDM,L1 mgmt
     class K8TCP,K8TW,HAOS,PBS,QDEV,L2 trusted
-    class K8D1,K8D2,L3 dmz
+    class L3 dmz
 
     style S1 fill:#1b1b1d,stroke:#3a3a3d,stroke-width:2px
     style S2 fill:#1b1b1d,stroke:#3a3a3d,stroke-width:2px
@@ -144,7 +142,8 @@ flowchart TB
 | Cluster | VLAN | Purpose |
 |---|---|---|
 | `k8s-trusted` | 20 | LAN-only services |
-| `k8s-dmz` | 50 | Public apps, via Cloudflare Tunnel |
+
+k8s-dmz (VLAN 50, public apps) was removed to make room for `k8s-geese`, one cluster with trusted and DMZ nodes ([ADR 0001](doc/adr/0001-single-cluster-cilium.md)). Public apps are offline until it's up.
 
 Each cluster has one node per Proxmox host. Control planes also run workloads. Since I would need three CP, as per etcd requirements, HA is currently not achieved. The addition of an offsite CP is part of my [roadmap](doc/roadmap.md). 
 
@@ -152,8 +151,6 @@ Each cluster has one node per Proxmox host. Control planes also run workloads. S
 |---|---|---|---|---|
 | k8s-trusted-cp1 | 10.10.20.50 | control plane | `goose` | 12 GB |
 | k8s-trusted-w1 | 10.10.20.51 | worker | `goose2` | 6 GB |
-| k8s-dmz-1 | 10.10.50.50 | control plane | `goose` | 4 GB |
-| k8s-dmz-2 | 10.10.50.51 | worker | `goose2` | 3 GB |
 
 
 ## Deployment
@@ -180,7 +177,7 @@ flux bootstrap github --owner=folatulip --repository=homelab --personal \
   --branch=main --path=kubernetes/clusters/k8s-trusted
 ```
 
-For k8s-dmz, use the `dmz_*` outputs, the DMZ key only, and `--path=kubernetes/clusters/k8s-dmz`. Details in [doc/rebuild.md](doc/rebuild.md).
+Details in [doc/rebuild.md](doc/rebuild.md).
 
 ## Workflow
 
