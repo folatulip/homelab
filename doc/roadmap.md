@@ -16,6 +16,8 @@
 
 ## 3. One cluster
 
+Design and migration order: [ADR 0001](adr/0001-single-cluster-cilium.md).
+
 - [ ] Integrating Cilium
 - [ ] Merge the trusted + DMZ clusters into one
 - [ ] Handle VLANs inside the cluster (node pools per VLAN + network policies)
