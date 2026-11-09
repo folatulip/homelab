@@ -34,6 +34,11 @@ k8sClientRateLimit:
   qps: 10
   burst: 20
 
+# Node identities from node labels, so policies can match nodes with
+# fromNodes (zone-isolation/netpol-trusted.yaml denies the DMZ nodes).
+# Without it every other node is just "remote-node".
+nodeSelectorLabels: true
+
 # --- Placement ----------------------------------------------------------------
 # The agent runs on every node (DaemonSet, tolerates everything). The operator
 # has wide permissions on the cluster, so it stays off DMZ nodes. By default it
