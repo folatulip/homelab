@@ -1,7 +1,9 @@
-# Public apps on k8s-dmz. Folders not listed here are ignored.
-# To publish one: add an Ingress with host <app>.felixlatulip.ca, then add the
-# same public hostname to the tunnel in Cloudflare Zero Trust, pointing to
-# http://traefik.traefik.svc.cluster.local.
+# Public apps, on the DMZ nodes of k8s-geese. Folders not listed here are ignored.
+# To publish one: give it its own Namespace and an Ingress with host
+# <app>.felixlatulip.ca, add the namespace to traefik-dmz's allowlist
+# (infrastructure/traefik-dmz/helmrelease.yaml), then add the same public
+# hostname to the tunnel in Cloudflare Zero Trust, pointing to
+# http://traefik-dmz.traefik-dmz.svc.cluster.local.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

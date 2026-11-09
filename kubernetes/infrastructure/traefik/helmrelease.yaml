@@ -25,8 +25,8 @@ spec:
     deployment:
       replicas: 2
       # Routes to things outside the cluster (e.g. Proxmox) go in the
-      # traefik-dynamic ConfigMap. It's optional, so a cluster without it
-      # (k8s-dmz) just gets an empty folder.
+      # traefik-dynamic ConfigMap (apps/trusted/proxmox/). It's optional, so
+      # Traefik still starts before that app is deployed.
       additionalVolumes:
         - name: traefik-dynamic
           configMap:

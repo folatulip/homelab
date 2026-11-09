@@ -1,6 +1,6 @@
 # k8s-trusted add-ons, applied by Flux from this repo in dependency order.
 # Each entry points at a folder under kubernetes/infrastructure/, shared with
-# k8s-dmz. Per-cluster values (IPs) are filled in by postBuild.substitute.
+# k8s-geese. Per-cluster values (IPs) are filled in by postBuild.substitute.
 # wait: true = a Kustomization is only Ready once its Deployments/DaemonSets
 # are healthy, so dependents (dependsOn) don't start too early.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
