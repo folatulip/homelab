@@ -4,7 +4,10 @@
 # - pods anywhere else can't tolerate the DMZ taint, so they never land on a
 #   DMZ node (a node can't remove its own taint, NodeRestriction)
 # - no pod sets spec.nodeName: that skips the scheduler, so taints and
-#   affinity wouldn't apply
+#   affinity wouldn't apply. Except longhorn-system: Longhorn places its
+#   instance-manager pods with nodeName, only on Longhorn nodes (trusted,
+#   longhorn-manager doesn't tolerate the DMZ taint). The toleration rules
+#   still apply there.
 # kube-system is skipped: the Cilium agent has to run on every node.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
@@ -53,7 +56,9 @@ spec:
         node-restriction.kubernetes.io/zone In [dmz] (ADR 0001).
     - expression: variables.zone == 'dmz' || !variables.toleratesDmz
       message: Only pods in a dmz namespace can tolerate the felixlatulip.ca/zone taint (ADR 0001).
-    - expression: request.operation != 'CREATE' || !has(object.spec.nodeName) || object.spec.nodeName == ''
+    - expression: >-
+        request.operation != 'CREATE' || !has(object.spec.nodeName) || object.spec.nodeName == ''
+        || request.namespace == 'longhorn-system'
       message: Pods can't set spec.nodeName, it skips the zone checks. Use node affinity instead.
 ---
 apiVersion: admissionregistration.k8s.io/v1
