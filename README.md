@@ -10,7 +10,7 @@ Everything that runs the 🪿 geese clusters, declared in code.
 ![Wifi](https://img.shields.io/badge/LAN-UP-2ea043?style=for-the-badge&logo=ubiquiti&logoColor=white)
 ![Age](https://img.shields.io/badge/Age-0d-2ea043?style=for-the-badge&labelColor=1a1a1a)
 ![Uptime](https://img.shields.io/badge/Uptime-0d-2ea043?style=for-the-badge&labelColor=1a1a1a)
-![Nodes](https://img.shields.io/badge/Nodes-2-326CE5?style=for-the-badge&labelColor=1a1a1a)
+![Nodes](https://img.shields.io/badge/Nodes-4-326CE5?style=for-the-badge&labelColor=1a1a1a)
 ![Pods](https://img.shields.io/badge/Pods-0-326CE5?style=for-the-badge&labelColor=1a1a1a)
 ![CPU](https://img.shields.io/badge/CPU-0%25-E57000?style=for-the-badge&labelColor=1a1a1a)
 ![Memory](https://img.shields.io/badge/Memory-0%25-E57000?style=for-the-badge&labelColor=1a1a1a)
@@ -30,7 +30,7 @@ Everything that runs the 🪿 geese clusters, declared in code.
 
 ## Overview
 
-My homelab as code. Terraform builds the Proxmox VMs and two Talos Kubernetes clusters. Flux deploys everything else from this repo.
+My homelab as code. Terraform builds the Proxmox VMs and one Talos Kubernetes cluster, `k8s-geese`. Flux deploys everything else from this repo.
 
 > **What is a homelab?**
 >
@@ -42,6 +42,7 @@ My homelab as code. Terraform builds the Proxmox VMs and two Talos Kubernetes cl
 |---|---|---|
 | [Vaultwarden](https://github.com/dani-garcia/vaultwarden) | Password manager | `vaultwarden.lab.felixlatulip.ca` |
 | [Sure](https://github.com/we-promise/sure) | Personal finance | `sure.lab.felixlatulip.ca` |
+| hello | Test page, public (DMZ) | `hello.felixlatulip.ca` |
 
 ## Network Topology
 ```mermaid
@@ -97,15 +98,17 @@ flowchart TB
         HAOS["<div style='width:200px;text-align:center;line-height:1.35'><b>HAOS</b><br/><small>VM · 3GB</small></div>"]
         UOS["<div style='width:200px;text-align:center;line-height:1.35'><b>UniFi OS Server</b><br/><small>VM · 3GB</small></div>"]
         PDM["<div style='width:200px;text-align:center;line-height:1.35'><b>PDM</b><br/><small>LXC · 1GB</small></div>"]
-        K8TW["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-w1</b><br/><small>Worker · 6GB</small></div>"]
-        H2 ~~~ HAOS ~~~ UOS ~~~ PDM ~~~ K8TW
+        K8TW["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-geese-w1</b><br/><small>Worker · 6GB</small></div>"]
+        K8D2["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-geese-dmz2</b><br/><small>DMZ worker · 3GB</small></div>"]
+        H2 ~~~ HAOS ~~~ UOS ~~~ PDM ~~~ K8TW ~~~ K8D2
     end
 
     subgraph S1["<b>goose</b>"]
         direction TB
         H1["<div style='width:200px;text-align:center;line-height:1.35'>i5-8600K · 24GB · 10GbE</div>"]
-        K8TCP["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-trusted-cp1</b><br/><small>CP + worker · 12GB</small></div>"]
-        H1 ~~~ K8TCP
+        K8TCP["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-geese-cp1</b><br/><small>CP + worker · 12GB</small></div>"]
+        K8D1["<div style='width:200px;text-align:center;line-height:1.35'><b>k8s-geese-dmz1</b><br/><small>DMZ worker · 3GB</small></div>"]
+        H1 ~~~ K8TCP ~~~ K8D1
     end
 
     subgraph LEGEND[" "]
@@ -127,7 +130,7 @@ flowchart TB
     class H1,H2,H3 hdr
     class WIFI,IOT,UOS,PDM,L1 mgmt
     class K8TCP,K8TW,HAOS,PBS,QDEV,L2 trusted
-    class L3 dmz
+    class K8D1,K8D2,L3 dmz
 
     style S1 fill:#1b1b1d,stroke:#3a3a3d,stroke-width:2px
     style S2 fill:#1b1b1d,stroke:#3a3a3d,stroke-width:2px
@@ -137,32 +140,39 @@ flowchart TB
     linkStyle 0 stroke:#3fd1a2,stroke-width:3px
 ```
 
-## Clusters
+## Cluster
 
-| Cluster | VLAN | Purpose |
-|---|---|---|
-| `k8s-trusted` | 20 | LAN-only services |
+One cluster, `k8s-geese`, with two kinds of nodes ([ADR 0001](doc/adr/0001-single-cluster-cilium.md)):
 
-k8s-dmz (VLAN 50, public apps) was removed to make room for `k8s-geese`, one cluster with trusted and DMZ nodes ([ADR 0001](doc/adr/0001-single-cluster-cilium.md)). Public apps are offline until it's up.
+- **Trusted nodes** (VLAN 20) run the LAN-only apps, Longhorn and the control plane.
+- **DMZ nodes** (VLAN 50) only run public apps, reached through a Cloudflare Tunnel. They're tainted, and Cilium network policies stop DMZ pods and nodes from reaching anything trusted. VLAN 50 is also firewalled from the LAN, in case a policy is wrong.
 
-Each cluster has one node per Proxmox host. Control planes also run workloads. Since I would need three CP, as per etcd requirements, HA is currently not achieved. The addition of an offsite CP is part of my [roadmap](doc/roadmap.md). 
+Cilium is the CNI (no kube-proxy, no MetalLB). There's one node of each kind per Proxmox host. The control plane also runs workloads. Since I would need three CP, as per etcd requirements, HA is currently not achieved. The addition of an offsite CP is part of my [roadmap](doc/roadmap.md).
 
-| Node | IP | Role | Host | RAM |
-|---|---|---|---|---|
-| k8s-trusted-cp1 | 10.10.20.50 | control plane | `goose` | 12 GB |
-| k8s-trusted-w1 | 10.10.20.51 | worker | `goose2` | 6 GB |
+| Node | IP | Zone | Role | Host | RAM |
+|---|---|---|---|---|---|
+| k8s-geese-cp1 | 10.10.20.60 | trusted | control plane + worker | `goose` | 12 GB |
+| k8s-geese-w1 | 10.10.20.61 | trusted | worker | `goose2` | 6 GB |
+| k8s-geese-dmz1 | 10.10.50.60 | dmz | worker | `goose` | 3 GB |
+| k8s-geese-dmz2 | 10.10.50.61 | dmz | worker | `goose2` | 3 GB |
 
 
 ## Deployment
 
-**1. Build the VMs and clusters**
+**1. Build the VMs and the cluster** (UniFi firewall rules first, see the rebuild doc)
 
 ```sh
 terraform -chdir=terraform apply
-terraform -chdir=terraform output -raw trusted_kubeconfig > ~/.kube/config
+terraform -chdir=terraform output -raw geese_kubeconfig > ~/.kube/config
 ```
 
-**2. Add the sops key** (before Flux, or secrets fail to decrypt)
+**2. Install Cilium** (the nodes stay `NotReady` until there's a CNI)
+
+```sh
+scripts/bootstrap-cilium.sh admin@k8s-geese
+```
+
+**3. Add the sops key** (before Flux, or secrets fail to decrypt)
 
 ```sh
 kubectl create namespace flux-system
@@ -170,14 +180,9 @@ kubectl -n flux-system create secret generic sops-age \
   --from-file=age.agekey="$HOME/Library/Application Support/sops/age/keys.txt"
 ```
 
-**3. Bootstrap Flux** (with a short-lived `GITHUB_TOKEN`)
+**4. Install Flux** from `kubernetes/cluster/flux-system/` with a read-only deploy key. Flux then takes over Cilium and deploys everything else.
 
-```sh
-flux bootstrap github --owner=folatulip --repository=homelab --personal \
-  --branch=main --path=kubernetes/clusters/k8s-trusted
-```
-
-Details in [doc/rebuild.md](doc/rebuild.md).
+Exact commands in [doc/rebuild.md](doc/rebuild.md#creating-k8s-geese).
 
 ## Workflow
 
@@ -188,7 +193,7 @@ flux reconcile kustomization flux-system --with-source   # sync now
 flux get kustomizations                                  # status
 ```
 
-Per-cluster values (`LB_RANGE`, `TRAEFIK_IP`) live in each cluster's `infrastructure.yaml`.
+Cluster values like `TRAEFIK_IP` are set in `kubernetes/cluster/infrastructure.yaml`.
 
 ## Adding an App
 
@@ -218,7 +223,7 @@ sed -i '' "s/APP_NAME/$app/g" kubernetes/apps/trusted/$app/*.yaml
 | [Talos](doc/talos.md) | 1.14 quirks, upgrades |
 | [Rebuild](doc/rebuild.md) | disaster recovery |
 | [Sure](doc/runbooks/sure.md) | backups, restore, upgrades |
-| [ADR 0001](doc/adr/0001-single-cluster-cilium.md) | one cluster with Cilium (proposed) |
+| [ADR 0001](doc/adr/0001-single-cluster-cilium.md) | one cluster with Cilium (accepted) |
 
 ## Roadmap
 

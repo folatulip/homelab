@@ -1,9 +1,9 @@
 # Sure runbook
 
-[Sure](https://github.com/we-promise/sure) (personal finance) runs in namespace `sure` on k8s-trusted, LAN only: https://sure.lab.felixlatulip.ca. It came from LXC 105 on goose (Docker Compose) on 2026-11-01.
+[Sure](https://github.com/we-promise/sure) (personal finance) runs in namespace `sure` on the trusted nodes, LAN only: https://sure.lab.felixlatulip.ca. It came from LXC 105 on goose (Docker Compose) on 2026-11-01, and moved to k8s-geese with its Longhorn volumes on 2026-11-09.
 
 - **Pods:** `sure` (Rails web + Sidekiq worker in one pod, since both need the uploads volume), `sure-db` (postgres:16.14), `sure-redis` (redis:8.8.0).
-- **Data:** PVCs `sure-db`, `sure-storage` (uploads) and `sure-redis` are on `longhorn-retain` and never pruned by Flux.
+- **Data:** PVCs `sure-db`, `sure-storage` (uploads), `sure-redis` and `sure-db-dumps` are on `longhorn-retain` and never pruned by Flux.
 - **Secrets:** `secret.sops.yaml` holds the Postgres login, `SECRET_KEY_BASE` and the three `ACTIVE_RECORD_ENCRYPTION_*` keys. **Those keys encrypt fields in the database: if they're lost or changed, that data can't be read.** Keep a copy in your password manager.
   `SECRET_KEY_BASE` also encrypts API keys saved in sure's settings (OpenAI, Anthropic, Twelve Data, ...), so once any are saved, changing it makes them unreadable. Otherwise it only signs logins, and a new one just logs everyone out.
 - **Rotating the Postgres password:** change `POSTGRES_PASSWORD` with `sops`, merge, wait for Flux to update the Secret, then set it in Postgres and restart the app:
@@ -13,6 +13,8 @@
     kubectl -n sure exec -i sure-db-0 -- sh -c 'read -r p; echo "ALTER USER CURRENT_USER PASSWORD :'\''p'\'';" | psql -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v p="$p"'
   kubectl -n sure rollout restart deploy/sure
   ```
+
+  If the Postgres step is skipped, `web` crash-loops on `password authentication failed for user` and the nightly dump fails too. That happened after the 11-01 rotation, and was only noticed on 11-09.
 - **Backups**, three layers:
   1. `sure-db-dump` CronJob: `pg_dump` every night at 07:00 UTC into the `sure-db-dumps` PVC, 14 days kept. Each dump is test-read before it's kept.
   2. Longhorn backs up every sure volume (dumps included) to the NAS daily at 08:00 UTC.
