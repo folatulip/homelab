@@ -13,6 +13,17 @@ spec:
     - name: longhorn-config
   interval: 10m
   retryInterval: 1m
+  # Trusted zone (ADR 0001): every Namespace gets the zone label.
+  patches:
+    - target:
+        kind: Namespace
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: any
+          labels:
+            felixlatulip.ca/zone: trusted
   path: ./kubernetes/apps/trusted
   prune: true
   sourceRef:
@@ -23,8 +34,12 @@ spec:
     secretRef:
       name: sops-age
 ---
-# Public apps, reached through the Cloudflare Tunnel. To add one: create
-# kubernetes/apps/dmz/<name>/ and list it in kubernetes/apps/dmz/kustomization.yaml.
+# Public apps, reached through the Cloudflare Tunnel. To add one:
+# 1. create kubernetes/apps/dmz/<name>/ with its own Namespace, and list it in
+#    kubernetes/apps/dmz/kustomization.yaml
+# 2. add the namespace to providers.kubernetesIngress.namespaces in
+#    infrastructure/traefik-dmz/helmrelease.yaml (same PR is fine: traefik-dmz
+#    waits for this one)
 # The patches below put it in the DMZ zone; apps don't have to.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -33,12 +48,13 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: traefik-dmz
+    - name: zone-isolation
     - name: local-path-provisioner
   interval: 10m
   retryInterval: 1m
-  # DMZ zone (ADR 0001): every Deployment only runs on DMZ nodes, every
-  # Namespace gets the dmz zone label and the restricted Pod Security level.
+  # DMZ zone (ADR 0001): every Deployment only runs on DMZ nodes and gets no
+  # API token, every Namespace gets the dmz zone label and the restricted Pod
+  # Security level. zone-isolation rejects DMZ pods without this.
   patches:
     - target:
         kind: Deployment
@@ -50,6 +66,7 @@ spec:
         spec:
           template:
             spec:
+              automountServiceAccountToken: false
               affinity:
                 nodeAffinity:
                   requiredDuringSchedulingIgnoredDuringExecution:
@@ -81,8 +98,10 @@ spec:
         kind: Ingress
         metadata:
           name: any
+          annotations:
+            kubernetes.io/ingress.class: traefik-dmz
         spec:
-          ingressClassName: traefik-dmz
+          ingressClassName: null
   path: ./kubernetes/apps/dmz
   prune: true
   sourceRef:

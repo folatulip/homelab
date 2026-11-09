@@ -1,0 +1,65 @@
+# Where pods can run (ADR 0001):
+# - pods in a dmz namespace must be pinned to DMZ nodes with a required node
+#   affinity on node-restriction.kubernetes.io/zone (the admin-only label)
+# - pods anywhere else can't tolerate the DMZ taint, so they never land on a
+#   DMZ node (a node can't remove its own taint, NodeRestriction)
+# - no pod sets spec.nodeName: that skips the scheduler, so taints and
+#   affinity wouldn't apply
+# kube-system is skipped: the Cilium agent has to run on every node.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: zone-pods
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  variables:
+    # A namespace without the label counts as trusted
+    - name: zone
+      expression: >-
+        has(namespaceObject.metadata.labels) && 'felixlatulip.ca/zone' in namespaceObject.metadata.labels
+        ? namespaceObject.metadata.labels['felixlatulip.ca/zone'] : 'trusted'
+    - name: terms
+      expression: >-
+        has(object.spec.affinity) && has(object.spec.affinity.nodeAffinity)
+        && has(object.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution)
+        ? object.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms : []
+    # Terms are OR'd, so every term has to require the dmz zone
+    - name: pinnedToDmz
+      expression: >-
+        size(variables.terms) > 0 && variables.terms.all(t,
+        has(t.matchExpressions) && t.matchExpressions.exists(e,
+        e.key == 'node-restriction.kubernetes.io/zone' && e.operator == 'In' && e.values == ['dmz']))
+    # An empty key with operator Exists tolerates every taint
+    - name: toleratesDmz
+      expression: >-
+        has(object.spec.tolerations) && object.spec.tolerations.exists(t,
+        (!has(t.key) || t.key == '' || t.key == 'felixlatulip.ca/zone')
+        && (!has(t.effect) || t.effect == '' || t.effect == 'NoSchedule'))
+  validations:
+    - expression: variables.zone != 'dmz' || variables.pinnedToDmz
+      message: >-
+        Pods in a dmz namespace need a required node affinity on
+        node-restriction.kubernetes.io/zone In [dmz] (ADR 0001).
+    - expression: variables.zone == 'dmz' || !variables.toleratesDmz
+      message: Only pods in a dmz namespace can tolerate the felixlatulip.ca/zone taint (ADR 0001).
+    - expression: request.operation != 'CREATE' || !has(object.spec.nodeName) || object.spec.nodeName == ''
+      message: Pods can't set spec.nodeName, it skips the zone checks. Use node affinity instead.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: zone-pods
+spec:
+  policyName: zone-pods
+  validationActions: [Deny]

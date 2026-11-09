@@ -46,15 +46,23 @@ spec:
           matchLabels:
             app.kubernetes.io/name: traefik
             app.kubernetes.io/instance: traefik-dmz-traefik-dmz
-    # Only Ingresses with ingressClassName: traefik-dmz. Both IngressClasses
-    # use the same controller name, so without this it would serve both.
+    # Roles in the watched namespaces only, no ClusterRole. The chart's
+    # ClusterRole can read every Secret in the cluster, which the public
+    # Traefik must never have.
+    rbac:
+      namespaced: true
+    # Namespaced RBAC can't read IngressClass objects, so Traefik ignores
+    # spec.ingressClassName and matches the kubernetes.io/ingress.class
+    # annotation instead. Flux sets it on every Ingress in apps/dmz/
+    # (kubernetes/cluster/apps.yaml). No IngressClass object needed.
     ingressClass:
-      enabled: true
-      isDefaultClass: false
-      name: traefik-dmz
+      enabled: false
     providers:
       kubernetesIngress:
         ingressClass: traefik-dmz
+        # Allowlist: add the namespace of every new DMZ app here.
+        namespaces:
+          - hello
         publishedService:
           enabled: false # ClusterIP, nothing to publish
       # No IngressRoutes: the CRD provider can't be limited to one class

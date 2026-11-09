@@ -1,0 +1,7 @@
+# Own namespace: on k8s-geese, Flux labels it as the dmz zone (restricted Pod
+# Security). traefik-dmz only watches namespaces it's told about, see
+# infrastructure/traefik-dmz/helmrelease.yaml.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello

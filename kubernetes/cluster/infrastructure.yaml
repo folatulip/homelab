@@ -48,6 +48,28 @@ spec:
     secretRef:
       name: sops-age
 ---
+# Admission policies + network policies keeping the zones apart (ADR 0001).
+# Everything in the DMZ waits for this, so nothing public runs unprotected.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: zone-isolation
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/zone-isolation
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -58,6 +80,17 @@ spec:
     - name: cilium
   interval: 1h
   retryInterval: 1m
+  # Trusted zone (ADR 0001): every Namespace gets the zone label.
+  patches:
+    - target:
+        kind: Namespace
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: any
+          labels:
+            felixlatulip.ca/zone: trusted
   path: ./kubernetes/infrastructure/local-path-provisioner
   prune: true
   wait: true
@@ -80,6 +113,17 @@ spec:
     - name: cilium-config
   interval: 1h
   retryInterval: 1m
+  # Trusted zone (ADR 0001): every Namespace gets the zone label.
+  patches:
+    - target:
+        kind: Namespace
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: any
+          labels:
+            felixlatulip.ca/zone: trusted
   postBuild:
     substitute:
       TRAEFIK_IP: 10.10.20.221
@@ -95,6 +139,9 @@ spec:
       name: sops-age
 ---
 # Public ingress, on DMZ nodes. ClusterIP only, so no IP pool needed.
+# After apps-dmz: its Helm chart puts a Role in each DMZ app's namespace, so
+# the namespaces have to exist first. Its own namespace is labeled dmz in
+# infrastructure/traefik-dmz/namespace.yaml.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -102,7 +149,8 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: cilium
+    - name: zone-isolation
+    - name: apps-dmz
   interval: 1h
   retryInterval: 1m
   path: ./kubernetes/infrastructure/traefik-dmz
@@ -126,6 +174,17 @@ spec:
     - name: cilium
   interval: 1h
   retryInterval: 1m
+  # Trusted zone (ADR 0001): every Namespace gets the zone label.
+  patches:
+    - target:
+        kind: Namespace
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: any
+          labels:
+            felixlatulip.ca/zone: trusted
   path: ./kubernetes/infrastructure/cert-manager
   prune: true
   wait: true
@@ -174,6 +233,17 @@ spec:
   interval: 1h
   retryInterval: 1m
   timeout: 10m # first install pulls ~15 images
+  # Trusted zone (ADR 0001): every Namespace gets the zone label.
+  patches:
+    - target:
+        kind: Namespace
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: any
+          labels:
+            felixlatulip.ca/zone: trusted
   path: ./kubernetes/infrastructure/longhorn
   prune: true
   wait: true
@@ -217,8 +287,9 @@ spec:
     - name: traefik-dmz
   interval: 1h
   retryInterval: 1m
-  # DMZ zone (ADR 0001): every Deployment only runs on DMZ nodes, every
-  # Namespace gets the dmz zone label and the restricted Pod Security level.
+  # DMZ zone (ADR 0001): every Deployment only runs on DMZ nodes and gets no
+  # API token, every Namespace gets the dmz zone label and the restricted Pod
+  # Security level. zone-isolation rejects DMZ pods without this.
   patches:
     - target:
         kind: Deployment
@@ -230,6 +301,7 @@ spec:
         spec:
           template:
             spec:
+              automountServiceAccountToken: false
               affinity:
                 nodeAffinity:
                   requiredDuringSchedulingIgnoredDuringExecution:
