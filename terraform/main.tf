@@ -24,35 +24,12 @@ module "talos_image" {
   ]
 }
 
-# --- Trusted cluster (VLAN 20, untagged on vmbr0) ---------------------
-# cp1 is control plane + worker. Longhorn keeps 2 replicas, one per host.
-module "trusted" {
-  source = "./modules/talos-cluster"
-
-  cluster_name  = "k8s-trusted"
-  talos_version = local.talos_version
-  endpoint_ip   = "10.10.20.50"
-  gateway       = "10.10.20.1"
-  vlan_id       = null
-  tags          = ["prod", "trusted"]
-
-  allow_scheduling_on_control_planes = true
-
-  installer_image = module.talos_image.installer_image
-  iso_ids         = module.talos_image.iso_ids
-
-  nodes = {
-    k8s-trusted-cp1 = { vm_id = 401, ip = "10.10.20.50", role = "controlplane", proxmox_node = "goose", memory = 12288, cores = 4, data_disk_size = 50 }
-    k8s-trusted-w1  = { vm_id = 411, ip = "10.10.20.51", role = "worker", proxmox_node = "goose2", memory = 6144, data_disk_size = 50 }
-  }
-}
-
 # --- k8s-geese: one cluster, trusted + DMZ nodes (ADR 0001) ----------
 # Trusted nodes on VLAN 20 (untagged), DMZ nodes on VLAN 50. Cilium replaces
 # flannel and kube-proxy: Talos boots it with no CNI, then
 # scripts/bootstrap-cilium.sh installs it and Flux takes over.
-# Small for now so it fits next to k8s-trusted. After k8s-trusted is gone
-# (step 8): cp1 -> 12 GB, w1 -> 6 GB, and add k8s-geese-dmz2 (652, 10.10.50.61, goose2).
+# Still the small sizes from when it ran next to k8s-trusted. Next PR:
+# cp1 -> 12 GB, w1 -> 6 GB, and add k8s-geese-dmz2 (652, 10.10.50.61, goose2).
 module "geese" {
   source = "./modules/talos-cluster"
 
