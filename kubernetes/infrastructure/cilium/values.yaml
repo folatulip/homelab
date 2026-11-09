@@ -39,12 +39,18 @@ k8sClientRateLimit:
 # Without it every other node is just "remote-node".
 nodeSelectorLabels: true
 
+# Restart the agents (and the operator) when cilium-config changes. Off by
+# default, so a config-only change (like nodeSelectorLabels) did nothing until
+# a manual `kubectl rollout restart ds/cilium`.
+rollOutCiliumPods: true
+
 # --- Placement ----------------------------------------------------------------
 # The agent runs on every node (DaemonSet, tolerates everything). The operator
 # has wide permissions on the cluster, so it stays off DMZ nodes. By default it
 # tolerates every taint, so the taint alone wouldn't keep it off.
 operator:
   replicas: 1
+  rollOutPods: true
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
