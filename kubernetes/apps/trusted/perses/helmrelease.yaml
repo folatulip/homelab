@@ -30,7 +30,7 @@ spec:
         authentication:
           providers:
             enable_native: true
-          # Open so the first account can be made. Set to true once "felix"
+          # Open so the first account can be made. Set to true once "folatulip"
           # exists, or anyone on the LAN can still sign up (with no rights).
           disable_sign_up: false
       # Read the files the sidecar drops in (datasource + admin binding) every minute
