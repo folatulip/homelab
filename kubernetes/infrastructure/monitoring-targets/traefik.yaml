@@ -1,0 +1,14 @@
+# Requests, latency and status codes per router/service. The chart already
+# serves metrics on :9100, it just has no Service for it, so a PodMonitor.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: traefik
+  namespace: traefik
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+      app.kubernetes.io/instance: traefik-traefik
+  podMetricsEndpoints:
+    - port: metrics
