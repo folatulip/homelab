@@ -1,6 +1,6 @@
 # hello.lab.felixlatulip.ca gets HTTPS from Traefik's default wildcard cert
 # (infrastructure/cert-manager-config/wildcard.yaml), so no tls section needed.
-# hello.10.10.20.201.sslip.io resolves via public wildcard DNS and keeps working
+# hello.10.10.20.221.sslip.io resolves via public wildcard DNS and keeps working
 # before local DNS exists (HTTP only; HTTPS shows a name mismatch).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -17,5 +17,5 @@ spec:
               service:
                 name: hello
                 port: { number: 80 }
-    - host: hello.10.10.20.201.sslip.io
+    - host: hello.10.10.20.221.sslip.io
       http: *hello

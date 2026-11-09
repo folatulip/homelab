@@ -1,5 +1,5 @@
-# LAN apps. Only the ones listed in kubernetes/apps/trusted/k8s-geese/ while
-# k8s-trusted still runs the others (ADR 0001, step 7).
+# LAN apps. To add one: create kubernetes/apps/trusted/<name>/ and list it in
+# kubernetes/apps/trusted/kustomization.yaml.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -24,7 +24,7 @@ spec:
           name: any
           labels:
             felixlatulip.ca/zone: trusted
-  path: ./kubernetes/apps/trusted/k8s-geese
+  path: ./kubernetes/apps/trusted
   prune: true
   sourceRef:
     kind: GitRepository

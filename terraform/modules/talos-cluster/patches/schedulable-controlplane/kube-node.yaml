@@ -2,8 +2,8 @@
 # Talos >= 1.14: node labels/taints live in the KubeNodeConfig document;
 # .cluster.allowSchedulingOnControlPlanes is rejected next to it.
 # - drop the NoSchedule taint so pods can land here
-# - drop exclude-from-external-load-balancers so MetalLB can announce
-#   LoadBalancer IPs (Traefik) from this node too
+# - drop exclude-from-external-load-balancers so LoadBalancer IPs (Traefik)
+#   can be announced from this node too (Cilium L2)
 apiVersion: v1alpha1
 kind: KubeNodeConfig
 labels:

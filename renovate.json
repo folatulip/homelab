@@ -18,7 +18,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Upstream manifests pinned by release tag in kustomization.yaml (MetalLB, local-path-provisioner)",
+      "description": "Upstream manifests pinned by release tag in kustomization.yaml (local-path-provisioner)",
       "managerFilePatterns": ["/^kubernetes/.+/kustomization\\.yaml$/"],
       "matchStrings": [
         "https://raw\\.githubusercontent\\.com/(?<depName>[^/]+/[^/]+)/(?<currentValue>v[0-9][^/]*)/"
@@ -44,11 +44,6 @@
     }
   ],
   "packageRules": [
-    {
-      "description": "MetalLB also publishes metallb-chart-* tags; only follow app releases",
-      "matchPackageNames": ["metallb/metallb"],
-      "allowedVersions": "/^v\\d+\\.\\d+\\.\\d+$/"
-    },
     {
       "description": "Talos OS upgrades are deliberate: roll nodes with talosctl upgrade, then merge",
       "matchPackageNames": ["siderolabs/talos"],
