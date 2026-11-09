@@ -8,3 +8,4 @@ resources:
   - fallback-k8s-trusted.yaml # until step 8, see the file
   - ../hello # test app, no data
   - ../proxmox # pve.lab route, no data. Still on k8s-trusted too until step 8 (rollback).
+  - ../vaultwarden # data restored from Longhorn backup vaultwarden-migrate. Old copy suspended at 0 on k8s-trusted (rollback).
