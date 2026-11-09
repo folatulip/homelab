@@ -1,5 +1,6 @@
 # Trusted pods (every namespace not labeled dmz, except kube-system) never
-# accept traffic from DMZ pods. A deny rule wins over any allow rule.
+# accept traffic from DMZ pods or DMZ nodes. A deny rule wins over any allow
+# rule.
 # enableDefaultDeny off: this only adds the deny, everything else stays
 # allowed like before (tighten per app later).
 # kube-system is left out so DMZ pods can still reach CoreDNS.
@@ -8,7 +9,7 @@ kind: CiliumClusterwideNetworkPolicy
 metadata:
   name: trusted-deny-from-dmz
 spec:
-  description: Trusted pods never accept traffic from DMZ pods (ADR 0001).
+  description: Trusted pods never accept traffic from DMZ pods or DMZ nodes (ADR 0001).
   endpointSelector:
     matchExpressions:
       - key: k8s:io.cilium.k8s.namespace.labels.felixlatulip.ca/zone
@@ -17,6 +18,10 @@ spec:
       - key: k8s:io.kubernetes.pod.namespace
         operator: NotIn
         values: [kube-system]
+      # Cilium's own health endpoints match the NotIns above (no namespace
+      # labels); leave them out so DMZ nodes still pass health checks.
+      - key: reserved:health
+        operator: DoesNotExist
   enableDefaultDeny:
     ingress: false
     egress: false
@@ -24,3 +29,10 @@ spec:
     - fromEndpoints:
         - matchLabels:
             k8s:io.cilium.k8s.namespace.labels.felixlatulip.ca/zone: dmz
+    # The DMZ nodes themselves (host network). They reach pods through the
+    # VXLAN tunnel, which UniFi has to allow, so the firewall can't stop them.
+    # Needs nodeSelectorLabels in the Cilium values. The zone label is
+    # admin-only, so a DMZ node can't change it.
+    - fromNodes:
+        - matchLabels:
+            node-restriction.kubernetes.io/zone: dmz

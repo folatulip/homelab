@@ -64,7 +64,7 @@ Why keep VLAN 50 at all if Cilium does the isolation: Cilium masquerades pod egr
 Cilium cluster-wide policies, selected by the namespace zone label:
 
 - **DMZ pods:** egress only to other DMZ pods, cluster DNS and the internet (`0.0.0.0/0` except private ranges). Ingress only from other DMZ pods. Only `traefik-dmz` can reach the API server.
-- **Trusted pods:** ingress deny from any DMZ endpoint. A deny wins over any allow, so this holds even if the DMZ policy is wrong.
+- **Trusted pods:** ingress deny from any DMZ endpoint and from the DMZ nodes themselves (`fromNodes` on the zone label, needs Cilium `nodeSelectorLabels`). A deny wins over any allow, so this holds even if the DMZ policy is wrong. The node part was added after the step 6 tests: a host-network process on a DMZ node reached every trusted pod and Service through the VXLAN tunnel, which UniFi has to allow.
 - Default-deny in DMZ namespaces. Trusted namespaces stay default-allow for now (can be tightened later, one app at a time).
 
 ### 5. Two Traefik instances
@@ -149,7 +149,7 @@ There isn't enough RAM to run the new cluster next to both old ones, so k8s-dmz 
 - Same RAM as today (24 GB vs 25 GB), but the DMZ nodes no longer run etcd and an API server, so all of their RAM goes to apps.
 
 **Worse**
-- **The boundary is softer.** Before, a compromised DMZ cluster was a separate cluster. Now, root on a DMZ node gets kubelet credentials and access to the VXLAN overlay. In tunnel mode Cilium carries the pod identity in the VXLAN header, so a node root could forge it and get past the policies. What's left: Talos is immutable with no shell, DMZ pods run `restricted`, the zone label can't be changed by the node, and VLAN 50 still blocks the LAN.
+- **The boundary is softer.** Before, a compromised DMZ cluster was a separate cluster. Now, root on a DMZ node gets kubelet credentials and access to the VXLAN overlay. In tunnel mode Cilium carries the pod identity in the VXLAN header, so a node root could forge it and get past the policies (the `fromNodes` deny stops plain host-network traffic, not forged packets). What's left: Talos is immutable with no shell, DMZ pods run `restricted`, the zone label can't be changed by the node, and VLAN 50 still blocks the LAN.
 - **One failure domain.** A bad Cilium config or Kubernetes upgrade takes down public and private apps together.
 - **Firewall holes** from VLAN 50 to VLAN 20 (section 8), limited to node IPs and ports.
 - Single control plane, same as today (HA is roadmap item 8).
