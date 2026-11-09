@@ -41,7 +41,7 @@ spec:
     topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: ScheduleAnyway # only one DMZ node until k8s-trusted is gone
+        whenUnsatisfiable: DoNotSchedule # one per DMZ node (dmz1, dmz2)
         labelSelector:
           matchLabels:
             app.kubernetes.io/name: traefik
