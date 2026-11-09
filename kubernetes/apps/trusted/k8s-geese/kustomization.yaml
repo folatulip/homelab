@@ -1,0 +1,8 @@
+# Trusted apps already moved to k8s-geese (ADR 0001, step 7). k8s-trusted
+# still deploys the list in ../kustomization.yaml, so an app moves by going
+# from that list to this one in its feat/migrate-<app> PR (after the Longhorn
+# restore). Once k8s-trusted is gone (step 8), this list replaces that one.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../hello # test app, no data
