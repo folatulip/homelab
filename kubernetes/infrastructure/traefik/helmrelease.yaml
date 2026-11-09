@@ -50,10 +50,14 @@ spec:
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
     # One replica per node, so losing a node doesn't take ingress down.
+    # nodeTaintsPolicy: Honor = don't count nodes Traefik can't run on (DMZ
+    # nodes on k8s-geese). Otherwise dmz1 counts as an empty node, and the
+    # extra pod of a rolling update is always "too much skew" -> Pending.
     topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: DoNotSchedule
+        nodeTaintsPolicy: Honor
         labelSelector:
           matchLabels:
             app.kubernetes.io/name: traefik
