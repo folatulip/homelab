@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Renders every kustomization that Flux applies and validates the output with
-# kubeconform. Objects that use CRDs (Flux, MetalLB, ...) are checked against
+# kubeconform. Objects that use CRDs (Flux, Cilium, ...) are checked against
 # the community CRD schema catalog.
 #
 # Usage: scripts/ci/validate-kubernetes.sh   (needs kubectl and kubeconform)
@@ -60,17 +60,12 @@ check_kustomizations() {
   done < <(find kubernetes -name kustomization.yaml -not -path '*/flux-system/*' | sort)
 }
 
-# 3. kubernetes/clusters (old clusters) and kubernetes/cluster (k8s-geese) are
+# 3. kubernetes/cluster is
 #    the Flux entry points. They're plain manifests (no kustomization.yaml of
 #    ours), so validate the files directly.
 check_flux_entrypoint() {
   local entry
-  for entry in kubernetes/clusters kubernetes/cluster; do
-    # kubernetes/clusters goes away with the old clusters
-    if [[ ! -d $entry ]]; then
-      continue
-    fi
-
+  for entry in kubernetes/cluster; do
     echo "::group::$entry"
     if ! find "$entry" -name '*.yaml' -not -path '*/flux-system/*' -print0 |
       xargs -0 kubeconform "${KUBECONFORM_ARGS[@]}"; then
