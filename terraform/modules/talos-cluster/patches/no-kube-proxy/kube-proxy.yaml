@@ -1,7 +1,8 @@
 # kube_proxy = false: Cilium replaces kube-proxy and reaches the API server
 # through KubePrism (localhost:7445, on by default).
-# Talos >= 1.14: kube-proxy is its own document; deleting it means no
-# kube-proxy DaemonSet. (.cluster.proxy.disabled is rejected next to it.)
+# Talos >= 1.14: kube-proxy is its own document. Deleting it doesn't work,
+# Talos falls back to the default (enabled), so set enabled: false instead.
+# Talos doesn't remove an existing kube-proxy DaemonSet, delete it by hand.
 apiVersion: v1alpha1
 kind: KubeProxyConfig
-$patch: delete
+enabled: false
