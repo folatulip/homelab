@@ -1,0 +1,7 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: perses
+spec:
+  interval: 12h
+  url: https://perses.github.io/helm-charts
