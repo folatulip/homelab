@@ -1,6 +1,13 @@
 # One Proxmox VM per node. First boot: empty disk falls through to the ISO
 # (Talos maintenance mode). After install: boots from scsi0.
 
+# A node uses the cluster's VLAN and gateway unless it sets its own
+# (e.g. DMZ workers on VLAN 50 in a cluster on VLAN 20).
+locals {
+  node_vlan    = { for name, n in var.nodes : name => n.vlan_id != null ? n.vlan_id : var.vlan_id }
+  node_gateway = { for name, n in var.nodes : name => coalesce(n.gateway, var.gateway) }
+}
+
 resource "proxmox_virtual_environment_vm" "this" {
   for_each = var.nodes
 
@@ -65,7 +72,7 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   network_device {
     bridge  = var.bridge
-    vlan_id = var.vlan_id
+    vlan_id = local.node_vlan[each.key]
   }
 
   operating_system {
@@ -79,12 +86,12 @@ resource "proxmox_virtual_environment_vm" "this" {
     ip_config {
       ipv4 {
         address = "${each.value.ip}/${var.prefix_length}"
-        gateway = var.gateway
+        gateway = local.node_gateway[each.key]
       }
     }
 
     dns {
-      servers = coalesce(var.dns_servers, [var.gateway])
+      servers = coalesce(var.dns_servers, [local.node_gateway[each.key]])
     }
   }
 }

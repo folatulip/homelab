@@ -49,7 +49,7 @@ Why keep VLAN 50 at all if Cilium does the isolation: Cilium masquerades pod egr
 
 ### 3. Zone label and placement
 
-- Every node has `node-restriction.kubernetes.io/zone: trusted|dmz`. Kubelets can't set labels under that prefix (NodeRestriction), so a compromised DMZ node can't relabel itself as trusted. The label is applied by an admin, not the node (check in step 1 how Talos does it; fallback is Terraform).
+- Every node has `node-restriction.kubernetes.io/zone: trusted|dmz`. Kubelets can't set labels under that prefix (NodeRestriction), so a compromised DMZ node can't relabel itself as trusted. Talos writes node labels with the node's own credentials, so it can't set this one: Terraform sets it as admin with `kubectl label` once the node registers (`terraform_data.zone_label` in the talos-cluster module).
 - DMZ nodes also have a `zone=dmz:NoSchedule` taint.
 - Every namespace has a `felixlatulip.ca/zone: trusted|dmz` label.
 - Pods are pinned with a **required** node affinity on the zone label, not just the taint. A trusted pod can never land on a DMZ node, even if the taint gets removed.

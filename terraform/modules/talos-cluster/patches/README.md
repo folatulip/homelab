@@ -8,6 +8,9 @@ Every `*.yaml` here is applied by `talos.tf`, in filename order:
 
 - `schedulable-controlplane/`: control planes, when the cluster sets
   `allow_scheduling_on_control_planes = true`
+- `cni-none/`: control planes, when the cluster sets `cni = "none"`
+- `no-kube-proxy/`: control planes, when the cluster sets `kube_proxy = false`
+- `zone-dmz/`: nodes with `zone = "dmz"`
 
 Files are Terraform templates; the only variable is `${installer_image}`.
 CI (`.github/workflows/ci.yml`) runs `talosctl validate` on a config generated

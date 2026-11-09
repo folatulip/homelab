@@ -24,6 +24,8 @@ output "info" {
         memory       = var.nodes[name].memory
         disk_size    = var.nodes[name].disk_size
         data_disk    = var.nodes[name].data_disk_size
+        vlan_id      = local.node_vlan[name]
+        zone         = var.nodes[name].zone
       }
     }
   }

@@ -22,17 +22,19 @@ trap 'rm -rf "$work_dir"' EXIT
 
 # Which talosctl flag to use for each patch folder.
 # data-disk is only on nodes with a Longhorn disk, but we apply it to both
-# roles here so it gets validated either way.
+# roles here so it gets validated either way. Same idea for the optional
+# folders (cni-none, no-kube-proxy, zone-dmz): all of them in one config.
 patch_flag() {
   case $1 in
     common | data-disk)                     echo "--config-patch" ;;
     controlplane | schedulable-controlplane) echo "--config-patch-control-plane" ;;
-    worker)                                  echo "--config-patch-worker" ;;
+    cni-none | no-kube-proxy)                echo "--config-patch-control-plane" ;;
+    worker | zone-dmz)                       echo "--config-patch-worker" ;;
   esac
 }
 
 patch_args=()
-for role in common controlplane worker data-disk schedulable-controlplane; do
+for role in common controlplane worker data-disk schedulable-controlplane cni-none no-kube-proxy zone-dmz; do
   # Not every role has a folder
   if [[ ! -d "$PATCHES_DIR/$role" ]]; then
     continue
