@@ -110,6 +110,7 @@ Only between node IPs, not whole subnets. The firewall is stateful, so replies a
 | trusted nodes | DMZ nodes | TCP 10250 | kubelet (logs, exec) |
 | trusted nodes | DMZ nodes | TCP 4244 | Hubble |
 | Mac | DMZ nodes | TCP 50000 | talosctl |
+| cp1 | DMZ nodes | TCP 50000 | talosctl through cp1 (the talosconfig endpoint) |
 
 ### 9. IPs and DNS cutover
 
