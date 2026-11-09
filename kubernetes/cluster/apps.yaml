@@ -1,0 +1,94 @@
+# LAN apps. To add one: create kubernetes/apps/trusted/<name>/ and list it in
+# kubernetes/apps/trusted/kustomization.yaml.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps-trusted
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: traefik
+    - name: local-path-provisioner
+    - name: longhorn
+    - name: longhorn-config
+  interval: 10m
+  retryInterval: 1m
+  path: ./kubernetes/apps/trusted
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# Public apps, reached through the Cloudflare Tunnel. To add one: create
+# kubernetes/apps/dmz/<name>/ and list it in kubernetes/apps/dmz/kustomization.yaml.
+# The patches below put it in the DMZ zone; apps don't have to.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps-dmz
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: traefik-dmz
+    - name: local-path-provisioner
+  interval: 10m
+  retryInterval: 1m
+  # DMZ zone (ADR 0001): every Deployment only runs on DMZ nodes, every
+  # Namespace gets the dmz zone label and the restricted Pod Security level.
+  patches:
+    - target:
+        kind: Deployment
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: any
+        spec:
+          template:
+            spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                      - matchExpressions:
+                          - key: node-restriction.kubernetes.io/zone
+                            operator: In
+                            values: [dmz]
+              tolerations:
+                - key: felixlatulip.ca/zone
+                  operator: Equal
+                  value: dmz
+                  effect: NoSchedule
+    - target:
+        kind: Namespace
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: any
+          labels:
+            felixlatulip.ca/zone: dmz
+            pod-security.kubernetes.io/enforce: restricted
+    # Public Ingresses always go to the DMZ Traefik
+    - target:
+        kind: Ingress
+      patch: |
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: any
+        spec:
+          ingressClassName: traefik-dmz
+  path: ./kubernetes/apps/dmz
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age

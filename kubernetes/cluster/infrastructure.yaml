@@ -1,0 +1,265 @@
+# k8s-geese add-ons, applied by Flux in dependency order.
+# Not bootstrapped yet: this folder becomes live with
+#   flux bootstrap github ... --path=kubernetes/cluster
+# after scripts/bootstrap-cilium.sh (ADR 0001, step 5).
+# wait: true = a Kustomization is only Ready once its workloads are healthy,
+# so dependents (dependsOn) don't start too early.
+#
+# Cilium is already installed by scripts/bootstrap-cilium.sh; this takes the
+# release over. Everything else depends on it, since pods need the CNI.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  path: ./kubernetes/infrastructure/cilium
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# LB IP pool + L2 policy are Cilium CRDs; they need Cilium first.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium-config
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/cilium-config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: local-path-provisioner
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/local-path-provisioner
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# Trusted ingress. Its LoadBalancer Service needs the IP pool.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium-config
+  interval: 1h
+  retryInterval: 1m
+  postBuild:
+    substitute:
+      TRAEFIK_IP: 10.10.20.221
+  path: ./kubernetes/infrastructure/traefik
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# Public ingress, on DMZ nodes. ClusterIP only, so no IP pool needed.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: traefik-dmz
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/traefik-dmz
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/cert-manager
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# Issuers + the wildcard cert need cert-manager's webhook running; the TLSStore
+# is a Traefik CRD. wait: true = Ready only once the wildcard cert is issued.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-config
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cert-manager
+    - name: traefik
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/cert-manager-config
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# Trusted nodes only: they're the ones with a data disk, and Longhorn doesn't
+# tolerate the DMZ taint. wait: true = Ready once the HelmRelease is healthy.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: longhorn
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cilium
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m # first install pulls ~15 images
+  path: ./kubernetes/infrastructure/longhorn
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# RecurringJob is a Longhorn CRD; it needs Longhorn first.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: longhorn-config
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: longhorn
+  interval: 1h
+  retryInterval: 1m
+  path: ./kubernetes/infrastructure/longhorn-config
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
+---
+# Cloudflare Tunnel connector, in the DMZ zone. Sends public requests to traefik-dmz.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cloudflared
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: traefik-dmz
+  interval: 1h
+  retryInterval: 1m
+  # DMZ zone (ADR 0001): every Deployment only runs on DMZ nodes, every
+  # Namespace gets the dmz zone label and the restricted Pod Security level.
+  patches:
+    - target:
+        kind: Deployment
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: any
+        spec:
+          template:
+            spec:
+              affinity:
+                nodeAffinity:
+                  requiredDuringSchedulingIgnoredDuringExecution:
+                    nodeSelectorTerms:
+                      - matchExpressions:
+                          - key: node-restriction.kubernetes.io/zone
+                            operator: In
+                            values: [dmz]
+              tolerations:
+                - key: felixlatulip.ca/zone
+                  operator: Equal
+                  value: dmz
+                  effect: NoSchedule
+    - target:
+        kind: Namespace
+      patch: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: any
+          labels:
+            felixlatulip.ca/zone: dmz
+            pod-security.kubernetes.io/enforce: restricted
+  path: ./kubernetes/infrastructure/cloudflared
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption: # decrypt *.sops.yaml Secrets with the age key in flux-system/sops-age
+    provider: sops
+    secretRef:
+      name: sops-age
