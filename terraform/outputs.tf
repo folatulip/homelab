@@ -1,6 +1,7 @@
 output "clusters" {
   value = {
     trusted = module.trusted.info
+    geese   = module.geese.info
   }
 }
 
@@ -12,6 +13,17 @@ output "trusted_talosconfig" {
 
 output "trusted_kubeconfig" {
   value     = module.trusted.kubeconfig
+  sensitive = true
+}
+
+# terraform output -raw geese_kubeconfig > ~/.kube/k8s-geese.yaml
+output "geese_talosconfig" {
+  value     = module.geese.talosconfig
+  sensitive = true
+}
+
+output "geese_kubeconfig" {
+  value     = module.geese.kubeconfig
   sensitive = true
 }
 
