@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik-dmz
+  labels:
+    felixlatulip.ca/zone: dmz
+    pod-security.kubernetes.io/enforce: restricted
