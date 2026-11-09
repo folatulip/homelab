@@ -8,3 +8,6 @@ resources:
   - namespace.yaml
   - helmrepository.yaml
   - helmrelease.yaml
+  # Here and not in zone-isolation: it needs this namespace, and traefik-dmz
+  # waits for zone-isolation.
+  - netpol-apiserver.yaml
