@@ -1,0 +1,14 @@
+# DMZ apps only get local-path (Longhorn stays on trusted nodes): one node's
+# disk, not replicated or backed up. The pod sticks to whichever node holds it.
+# The annotation stops Flux from ever pruning the PVC.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uptime-kuma-data
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: local-path
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 2Gi }
