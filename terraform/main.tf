@@ -28,8 +28,8 @@ module "talos_image" {
 # Trusted nodes on VLAN 20 (untagged), DMZ nodes on VLAN 50. Cilium replaces
 # flannel and kube-proxy: Talos boots it with no CNI, then
 # scripts/bootstrap-cilium.sh installs it and Flux takes over.
-# Still the small sizes from when it ran next to k8s-trusted. Next PR:
-# cp1 -> 12 GB, w1 -> 6 GB, and add k8s-geese-dmz2 (652, 10.10.50.61, goose2).
+# Same sizes k8s-trusted had, plus one DMZ node per host. Changing memory
+# reboots the VM (Proxmox, no hotplug).
 module "geese" {
   source = "./modules/talos-cluster"
 
@@ -48,8 +48,9 @@ module "geese" {
   iso_ids         = module.talos_image.iso_ids
 
   nodes = {
-    k8s-geese-cp1  = { vm_id = 601, ip = "10.10.20.60", role = "controlplane", proxmox_node = "goose", memory = 6144, cores = 4, data_disk_size = 50, zone = "trusted" }
-    k8s-geese-w1   = { vm_id = 611, ip = "10.10.20.61", role = "worker", proxmox_node = "goose2", memory = 4096, data_disk_size = 50, zone = "trusted" }
+    k8s-geese-cp1  = { vm_id = 601, ip = "10.10.20.60", role = "controlplane", proxmox_node = "goose", memory = 12288, cores = 4, data_disk_size = 50, zone = "trusted" }
+    k8s-geese-w1   = { vm_id = 611, ip = "10.10.20.61", role = "worker", proxmox_node = "goose2", memory = 6144, data_disk_size = 50, zone = "trusted" }
     k8s-geese-dmz1 = { vm_id = 651, ip = "10.10.50.60", role = "worker", proxmox_node = "goose", memory = 3072, vlan_id = 50, gateway = "10.10.50.1", zone = "dmz" }
+    k8s-geese-dmz2 = { vm_id = 652, ip = "10.10.50.61", role = "worker", proxmox_node = "goose2", memory = 3072, vlan_id = 50, gateway = "10.10.50.1", zone = "dmz" }
   }
 }
