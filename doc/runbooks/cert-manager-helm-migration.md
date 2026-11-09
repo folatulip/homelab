@@ -9,6 +9,32 @@ Flux reconcile, and those downloads sometimes time out (504). The chart comes
 from charts.jetstack.io, fetched by Flux inside the cluster, like the other
 Helm apps here.
 
+## What actually happened (2026-11-09)
+
+PR #60 was merged before step 1 (the `prune: disabled` annotation) was run.
+Flux pruned the old objects within a minute of the merge, CRDs included, so
+the `lab-wildcard` Certificate and both ClusterIssuers were deleted with them.
+It recovered on its own:
+
+- helm-controller installed the chart fresh (nothing left to adopt) and
+  recreated the CRDs and the 3 Deployments.
+- `cert-manager-config` re-applied the ClusterIssuers and `lab-wildcard`.
+- The Secrets aren't owned by the Certificate or the issuers, so they stayed:
+  `traefik/lab-wildcard-tls` (same cert, notBefore 2026-11-09 03:26 UTC) and
+  the `letsencrypt-*-account` keys. The new Certificate picked up the existing
+  Secret, so nothing was re-issued and Let's Encrypt wasn't contacted.
+- Traefik kept serving the Secret the whole time, so `*.lab` HTTPS didn't
+  drop. cert-manager itself was down for about a minute.
+
+Lost: only the old Certificate/Issuer objects and their status history.
+
+Lesson: when a PR needs a step on the cluster before merging, do that step
+before pushing. Auto PR opens the PR on push, and it's easy to merge right
+away. Or set `spec.suspend: true` on the Flux Kustomization in the same PR.
+
+The rest of this page is the plan as written before the merge. It's still the
+right way to do this kind of takeover next time.
+
 ## How the takeover works
 
 The chart renders the same 46 objects as the manifest (same names, same
@@ -35,7 +61,7 @@ issuers and the ACME account keys aren't touched. Checked on 2026-11-09 with
 `kubectl diff --server-side --force-conflicts --field-manager=helm-controller`
 against the rendered chart.
 
-## Rollout
+## Rollout (planned)
 
 Before merging, from an up-to-date main (the old kustomization):
 
@@ -110,5 +136,7 @@ kubectl -n traefik delete certificate cm-test && kubectl -n traefik delete secre
 
 ## Afterwards
 
-The `prune: disabled` annotation stays on the objects. It's harmless (Flux no
-longer manages them) and on the CRDs it's an extra safety net, so leave it.
+If step 1 ran, the `prune: disabled` annotation stays on the objects. It's
+harmless (Flux no longer manages them) and on the CRDs it's an extra safety
+net, so leave it. (On 2026-11-09 it never ran, so the live objects don't have
+it. The CRDs are still protected by `helm.sh/resource-policy: keep`.)
