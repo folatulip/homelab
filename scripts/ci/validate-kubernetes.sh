@@ -45,14 +45,32 @@ check_sops_files() {
   done < <(find kubernetes \( -name '*.sops.yaml' -o -name '*.sops.yml' \) | sort)
 }
 
+# Renders a kustomization, trying up to 3 times. Some of them pull an upstream
+# manifest over the network (local-path-provisioner), which can time out.
+render() {
+  local dir=$1 attempt
+  for attempt in 1 2 3; do
+    if kubectl kustomize "$dir"; then
+      return 0
+    fi
+    echo "::warning::kubectl kustomize $dir failed (attempt $attempt/3)" >&2
+    if [[ $attempt -lt 3 ]]; then
+      sleep $((attempt * 5))
+    fi
+  done
+  return 1
+}
+
 # 2. Render each folder that has a kustomization.yaml, then validate it
 check_kustomizations() {
-  local kustomization dir
+  local kustomization dir rendered
   while IFS= read -r kustomization; do
     dir=$(dirname "$kustomization")
 
     echo "::group::kustomize $dir"
-    if ! kubectl kustomize "$dir" | strip_sops_metadata | kubeconform "${KUBECONFORM_ARGS[@]}" -; then
+    # Render first, so a failed attempt doesn't send half a manifest to kubeconform
+    if ! rendered=$(render "$dir") ||
+      ! strip_sops_metadata <<< "$rendered" | kubeconform "${KUBECONFORM_ARGS[@]}" -; then
       echo "::error file=$kustomization::$dir failed validation"
       failed=1
     fi

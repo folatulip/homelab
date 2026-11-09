@@ -223,6 +223,7 @@ sed -i '' "s/APP_NAME/$app/g" kubernetes/apps/trusted/$app/*.yaml
 | [Talos](doc/talos.md) | 1.14 quirks, upgrades |
 | [Rebuild](doc/rebuild.md) | disaster recovery |
 | [Sure](doc/runbooks/sure.md) | backups, restore, upgrades |
+| [cert-manager to Helm](doc/runbooks/cert-manager-helm-migration.md) | one-time takeover of the static manifest |
 | [ADR 0001](doc/adr/0001-single-cluster-cilium.md) | one cluster with Cilium (accepted) |
 
 ## Roadmap
