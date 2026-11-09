@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: cert-manager
+      version: v1.21.2
+      sourceRef:
+        kind: HelmRepository
+        name: jetstack
+  install:
+    # Retry without uninstalling first. The default (RemediateOnFailure)
+    # uninstalls between attempts, which would remove the running controller.
+    strategy:
+      name: RetryOnFailure
+  upgrade:
+    remediation:
+      retries: 3
+  # All values: https://github.com/cert-manager/cert-manager/blob/master/deploy/charts/cert-manager/values.yaml
+  values:
+    crds:
+      # The CRDs are templates in this chart (not in crds/), so the install/upgrade
+      # crds: options don't apply. keep = Helm never deletes them, even on
+      # uninstall, so the Certificates and their Secrets stay.
+      enabled: true
+      keep: true
+    # DNS-01 self-check over DNS-over-HTTPS. The UniFi gateway intercepts all
+    # port-53 traffic (whatever server it's addressed to) and answers
+    # *.lab.felixlatulip.ca from its local wildcard record, which hides
+    # _acme-challenge.lab. DoH to Cloudflare's resolver goes around it.
+    # "Only": ask the resolver for the TXT record too, instead of querying the
+    # authoritative servers on port 53 (intercepted as well). Drawback: a
+    # not-found answer cached by 1.1.1.1 can delay issuance by up to ~30 min.
+    dns01RecursiveNameservers: https://1.1.1.1/dns-query,https://1.0.0.1/dns-query
+    dns01RecursiveNameserversOnly: true
