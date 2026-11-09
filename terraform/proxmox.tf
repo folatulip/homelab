@@ -73,13 +73,3 @@ module "proxmox" {
   }
   nas_passwords = var.nas_passwords
 }
-
-# goose-nas-cloud was created in the Proxmox UI before it was added here.
-# The API never returns SMB passwords, so the import has none and the plan
-# replaces it once to set the password from terraform.tfvars. Deleting a
-# storage only removes its config in Proxmox, the files on the NAS stay.
-# Can be removed once it's imported (terraform apply).
-import {
-  to = module.proxmox.proxmox_storage_cifs.this["goose-nas-cloud"]
-  id = "goose-nas-cloud"
-}
