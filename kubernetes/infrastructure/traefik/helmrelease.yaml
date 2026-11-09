@@ -24,14 +24,22 @@ spec:
   values:
     deployment:
       replicas: 2
-      # Routes to things outside the cluster (e.g. Proxmox) go in the
-      # traefik-dynamic ConfigMap (apps/trusted/proxmox/). It's optional, so
-      # Traefik still starts before that app is deployed.
+      # Routes to things outside the cluster, from two optional ConfigMaps
+      # merged into one folder:
+      # - traefik-dynamic: Proxmox (apps/trusted/proxmox/)
+      # - traefik-fallback: k8s-geese only, sends *.lab hosts it doesn't
+      #   serve yet to k8s-trusted (apps/trusted/k8s-geese/)
+      # Optional, so Traefik still starts without them.
       additionalVolumes:
         - name: traefik-dynamic
-          configMap:
-            name: traefik-dynamic
-            optional: true
+          projected:
+            sources:
+              - configMap:
+                  name: traefik-dynamic
+                  optional: true
+              - configMap:
+                  name: traefik-fallback
+                  optional: true
     additionalVolumeMounts:
       - name: traefik-dynamic
         mountPath: /etc/traefik/dynamic
