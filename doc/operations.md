@@ -8,6 +8,8 @@ talosctl -n 10.10.20.50 health
 flux get kustomizations
 ```
 
+k8s-geese: same commands with `--context admin@k8s-geese` (kubectl, flux) and `--context k8s-geese -n 10.10.20.60` (talosctl). Its configs are merged next to k8s-trusted's, see [rebuild.md](rebuild.md#creating-k8s-geese).
+
 Kubeconfig and talosconfig come from Terraform:
 
 ```sh

@@ -40,12 +40,12 @@ Why keep VLAN 50 at all if Cilium does the isolation: Cilium masquerades pod egr
 
 ### 2. Cilium as the CNI
 
-- `cni: none` and kube-proxy off in Talos. Cilium replaces kube-proxy and talks to the API through KubePrism (`localhost:7445`).
+- `cni: none` and kube-proxy off in Talos (`KubeProxyConfig` with `enabled: false`; deleting the document isn't enough, Talos falls back to enabled). Cilium replaces kube-proxy and talks to the API through KubePrism (`localhost:7445`).
 - **VXLAN tunnel** between nodes, so pod traffic between VLANs only needs the node IPs to reach each other.
 - **LB IPAM + L2 announcements** replace MetalLB. Only the trusted nodes announce, since an L2 announcement only works on the node's own subnet.
 - **Hubble** on, to see what the policies drop.
 
-**Bootstrap:** Flux can't run before a CNI exists. Cilium is installed once with `helm install` from a bootstrap script, using the same values file as the Flux HelmRelease. Then the HelmRelease (same name and namespace) takes over the release. Check that takeover works in step 5; if it doesn't, use Talos `inlineManifests` instead.
+**Bootstrap:** Flux can't run before a CNI exists. Cilium is installed once with `helm install` from a bootstrap script, using the same values file as the Flux HelmRelease. Then the HelmRelease (same name and namespace) takes over the release. Verified in step 5: helm-controller upgraded the bootstrap release in place (`cilium.v2`), no reinstall.
 
 ### 3. Zone label and placement
 
