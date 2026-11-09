@@ -1,5 +1,5 @@
-# LoadBalancer IPs on VLAN 20. Not MetalLB's .200-.220, so both can run while
-# apps move from k8s-trusted to k8s-geese. DMZ has no pool: the DMZ Traefik
+# LoadBalancer IPs on VLAN 20. .221-.240, not the old MetalLB .200-.220, so
+# both clusters could run side by side during the migration (ADR 0001). DMZ has no pool: the DMZ Traefik
 # is ClusterIP only, cloudflared reaches it from inside the cluster.
 apiVersion: cilium.io/v2
 kind: CiliumLoadBalancerIPPool

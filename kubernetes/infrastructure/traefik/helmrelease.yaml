@@ -24,28 +24,20 @@ spec:
   values:
     deployment:
       replicas: 2
-      # Routes to things outside the cluster, from two optional ConfigMaps
-      # merged into one folder:
-      # - traefik-dynamic: Proxmox (apps/trusted/proxmox/)
-      # - traefik-fallback: k8s-geese only, sends *.lab hosts it doesn't
-      #   serve yet to k8s-trusted (apps/trusted/k8s-geese/)
-      # Optional, so Traefik still starts without them.
+      # Routes to things outside the cluster (e.g. Proxmox) go in the
+      # traefik-dynamic ConfigMap (apps/trusted/proxmox/). It's optional, so
+      # Traefik still starts before that app is deployed.
       additionalVolumes:
         - name: traefik-dynamic
-          projected:
-            sources:
-              - configMap:
-                  name: traefik-dynamic
-                  optional: true
-              - configMap:
-                  name: traefik-fallback
-                  optional: true
+          configMap:
+            name: traefik-dynamic
+            optional: true
     additionalVolumeMounts:
       - name: traefik-dynamic
         mountPath: /etc/traefik/dynamic
         readOnly: true
-    # Not the chart's providers.file, since that one would ship the same
-    # routes to both clusters.
+    # Not the chart's providers.file: it would put the routes in the Helm
+    # values instead of the app's folder.
     additionalArguments:
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
@@ -79,10 +71,8 @@ spec:
       sendAnonymousUsage: false
     service:
       annotations:
-        # Set per cluster (postBuild.substitute in kubernetes/clusters/<cluster>/).
-        # MetalLB reads the first one, Cilium (k8s-geese) the second; each
-        # ignores the other. Drop the MetalLB one with k8s-trusted.
-        metallb.io/loadBalancerIPs: ${TRAEFIK_IP}
+        # Fixed IP from the Cilium pool (postBuild.substitute in
+        # kubernetes/cluster/infrastructure.yaml)
         lbipam.cilium.io/ips: ${TRAEFIK_IP}
       spec:
         externalTrafficPolicy: Local # keeps real client IPs in access logs
