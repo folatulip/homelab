@@ -11,6 +11,7 @@ spec:
     - name: local-path-provisioner
     - name: longhorn
     - name: longhorn-config
+    - name: monitoring
   interval: 10m
   retryInterval: 1m
   # Trusted zone (ADR 0001): every Namespace gets the zone label.

@@ -1,0 +1,8 @@
+# node-exporter reads the host (hostNetwork, hostPID, /proc, /sys), so this
+# namespace can't be "restricted".
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
