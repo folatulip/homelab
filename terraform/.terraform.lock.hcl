@@ -3,9 +3,10 @@
 
 provider "registry.terraform.io/bpg/proxmox" {
   version     = "0.118.0"
-  constraints = "0.118.0"
+  constraints = ">= 0.118.0, 0.118.0"
   hashes = [
     "h1:IAkra/f95pnYd6cFMHQnkMV4M/ALnn+s2ZKNXrlZOjA=",
+    "h1:MjA21MOiZWbkC5JWGmr6SnBsQ9mX/HoKnHFKuTBYcWc=",
     "zh:136a19b2d8a4ad9f8d56225f02fa84826968e5f0796c0c05168ca4456d82ad02",
     "zh:25e398488b58b7c2391ba07424d6c216187e06666d7c61dbbe7feb0024f41ad5",
     "zh:31d8ef4bc134dce3eaa605621aed92302485801820ed7e2489dedec2fe7d019d",
@@ -25,8 +26,9 @@ provider "registry.terraform.io/bpg/proxmox" {
 
 provider "registry.terraform.io/siderolabs/talos" {
   version     = "0.12.0"
-  constraints = "~> 0.12.0"
+  constraints = ">= 0.12.0, ~> 0.12.0"
   hashes = [
+    "h1:MROf5tBE/arrhUXKFBDxVIV2GEp++m+ZfmeEcCBVmUA=",
     "h1:qnBh8ioMyvKfU0NHIKCqYK5yvADxz0WjnS2Jzv1+54Y=",
     "zh:0fa82a384b25a58b65523e0ea4768fa1212b1f5cfc0c9379d31162454fedcc9d",
     "zh:361543a6a5fae426bffb2930cbfd76de3d2763ca262cfc7d940a2dd6a6080043",

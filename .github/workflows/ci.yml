@@ -55,8 +55,25 @@ jobs:
       - name: Check formatting
         run: terraform fmt -check -recursive -diff
 
+      # Providers are downloaded from GitHub releases, which sometimes time out (504).
+      # Keep them between runs; a new lock file (provider update) = new cache.
+      # The lock file needs an h1: hash for linux_amd64, or init ignores the cache:
+      #   terraform providers lock -platform=linux_amd64 -platform=darwin_arm64
+      - name: Cache providers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/terraform-plugin-cache
+          key: terraform-providers-${{ runner.os }}-${{ hashFiles('terraform/.terraform.lock.hcl') }}
+
       - name: Init
-        run: terraform init -backend=false -input=false # no backend, so no credentials needed
+        env:
+          TF_PLUGIN_CACHE_DIR: ${{ runner.temp }}/terraform-plugin-cache
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR" # terraform won't create it
+          # No backend, so no credentials needed.
+          # One retry: a download timeout shouldn't fail the required check.
+          init() { terraform init -backend=false -input=false; }
+          init || { echo "::warning::terraform init failed, retrying in 15s"; sleep 15; init; }
 
       - name: Validate
         run: terraform validate
