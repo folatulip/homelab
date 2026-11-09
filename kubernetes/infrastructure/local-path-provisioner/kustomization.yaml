@@ -24,6 +24,39 @@ patches:
               }
             ]
           }
+        # Upstream template + no API token. Helper pods run on the PVC's node,
+        # DMZ nodes included, as the provisioner's service account (it can
+        # create pods in this privileged namespace). The token must never land
+        # on a DMZ node. zone-pods (zone-isolation) rejects helper pods without this.
+        helperPod.yaml: |-
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: helper-pod
+          spec:
+            automountServiceAccountToken: false
+            priorityClassName: system-node-critical
+            tolerations:
+              - key: node.kubernetes.io/disk-pressure
+                operator: Exists
+                effect: NoSchedule
+            containers:
+            - name: helper-pod
+              image: docker.io/library/busybox
+              imagePullPolicy: IfNotPresent
+  # The helper pod template is only read at startup: bump this to restart the
+  # provisioner after changing helperPod.yaml.
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: local-path-provisioner
+        namespace: local-path-storage
+      spec:
+        template:
+          metadata:
+            annotations:
+              felixlatulip.ca/helper-pod-rev: "1"
   # Helper pods use hostPath to create/delete volume dirs; Talos enforces "baseline".
   - patch: |-
       apiVersion: v1
