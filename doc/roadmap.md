@@ -18,9 +18,9 @@
 
 Design and migration order: [ADR 0001](adr/0001-single-cluster-cilium.md).
 
-- [ ] Integrating Cilium
-- [ ] Merge the trusted + DMZ clusters into one
-- [ ] Handle VLANs inside the cluster (node pools per VLAN + network policies)
+- [x] Integrating Cilium
+- [x] Merge the trusted + DMZ clusters into one
+- [x] Handle VLANs inside the cluster (node pools per VLAN + network policies)
 
 ## 4. Terraform the rest
 

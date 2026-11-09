@@ -3,19 +3,20 @@
 ## Health check
 
 ```sh
-kubectl get nodes -o wide
-talosctl -n 10.10.20.50 health
+kubectl get nodes -L node-restriction.kubernetes.io/zone   # 4 Ready, 2 trusted + 2 dmz
+talosctl -n 10.10.20.60 health
 flux get kustomizations
+cilium status   # or: kubectl -n kube-system get ds cilium
 ```
 
-k8s-geese: same commands with `--context admin@k8s-geese` (kubectl, flux) and `--context k8s-geese -n 10.10.20.60` (talosctl). Its configs are merged next to k8s-trusted's, see [rebuild.md](rebuild.md#creating-k8s-geese).
-
-Kubeconfig and talosconfig come from Terraform:
+Contexts are `admin@k8s-geese` (kubectl, flux) and `k8s-geese` (talosctl). Kubeconfig and talosconfig come from Terraform:
 
 ```sh
-terraform -chdir=terraform output -raw trusted_kubeconfig > ~/.kube/config
-terraform -chdir=terraform output -raw trusted_talosconfig > ~/.talos/config
+terraform -chdir=terraform output -raw geese_kubeconfig > ~/.kube/config
+terraform -chdir=terraform output -raw geese_talosconfig > ~/.talos/config
 ```
+
+**Rebooting or resizing nodes:** see the end of [rebuild.md](rebuild.md#creating-k8s-geese). Changing a VM's RAM in Terraform shuts it down, and Talos cordons and drains it first. Changing both trusted nodes in one apply cordons both at once, so the LAN apps are down until they're back (~5 min). Change one at a time to avoid it.
 
 ## Deploying changes
 
@@ -28,12 +29,7 @@ flux get kustomizations                                  # status of each layer
 
 Deleting a file from git deletes its objects from the cluster, because every Flux Kustomization has `prune: true`.
 
-k8s-trusted and k8s-geese use the same folders under `kubernetes/infrastructure/`. Values that differ per cluster are written as `${VAR}` in the manifest and set in that cluster's `infrastructure.yaml` under `postBuild.substitute`:
-
-| Variable | k8s-trusted | k8s-geese |
-|---|---|---|
-| `LB_RANGE` (MetalLB pool) | 10.10.20.200-10.10.20.220 | none, Cilium pool in `cilium-config/` |
-| `TRAEFIK_IP` | 10.10.20.201 | 10.10.20.221 |
+A few values are written as `${VAR}` in the manifests and set in `kubernetes/cluster/infrastructure.yaml` under `postBuild.substitute`, e.g. `TRAEFIK_IP` (`10.10.20.221`).
 
 ## Experiments
 
