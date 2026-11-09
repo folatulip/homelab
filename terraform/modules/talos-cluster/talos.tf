@@ -83,6 +83,17 @@ resource "terraform_data" "zone_label" {
       trap 'rm -f "$kubeconfig"' EXIT
       printf '%s' "$KUBECONFIG_DATA" > "$kubeconfig"
 
+      # Talos gives out the kubeconfig before the API server is up, and
+      # kubectl wait doesn't retry "connection refused". Wait for it first.
+      for i in $(seq 60); do
+        kubectl --kubeconfig "$kubeconfig" get --raw /readyz >/dev/null 2>&1 && break
+        if [[ $i -eq 60 ]]; then
+          echo "API server still not ready after 10 min" >&2
+          exit 1
+        fi
+        sleep 10
+      done
+
       # The node only exists once its kubelet has registered
       kubectl --kubeconfig "$kubeconfig" wait --for=create "node/$NODE" --timeout=15m
       kubectl --kubeconfig "$kubeconfig" label node "$NODE" --overwrite "node-restriction.kubernetes.io/zone=$ZONE"
