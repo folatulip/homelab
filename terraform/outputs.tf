@@ -1,7 +1,6 @@
 output "clusters" {
   value = {
     trusted = module.trusted.info
-    dmz     = try(module.dmz[0].info, null)
   }
 }
 
@@ -13,16 +12,6 @@ output "trusted_talosconfig" {
 
 output "trusted_kubeconfig" {
   value     = module.trusted.kubeconfig
-  sensitive = true
-}
-
-output "dmz_talosconfig" {
-  value     = try(module.dmz[0].talosconfig, null)
-  sensitive = true
-}
-
-output "dmz_kubeconfig" {
-  value     = try(module.dmz[0].kubeconfig, null)
   sensitive = true
 }
 

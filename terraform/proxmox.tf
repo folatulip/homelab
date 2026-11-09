@@ -23,14 +23,14 @@ module "proxmox" {
       gateway      = "10.10.20.1"
       bridge_ports = ["eno1"]
       vlan_aware   = true
-      vlans        = local.dmz_enabled ? [20, 50] : [20] # 50 = DMZ (main.tf)
+      vlans        = [20, 50] # 50 = DMZ nodes (ADR 0001)
     }
 
     goose2 = {
       ip           = "10.10.20.4"
       gateway      = "10.10.20.1"
       bridge_ports = ["nic0"]
-      vlan_aware   = local.dmz_enabled # carries VLAN 50 for k8s-dmz-2
+      vlan_aware   = true # carries VLAN 50 for the DMZ nodes
       vlans        = [20, 50]
 
       # The hosts don't need an IP on VLAN 50: VMs tag their own traffic.

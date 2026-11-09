@@ -46,33 +46,3 @@ module "trusted" {
     k8s-trusted-w1  = { vm_id = 411, ip = "10.10.20.51", role = "worker", proxmox_node = "goose2", memory = 6144, data_disk_size = 50 }
   }
 }
-
-# --- DMZ cluster (VLAN 50, tagged on vmbr0) ---------------------------
-# Off until VLAN 50 exists in UniFi and is tagged on both hosts' switch
-# ports. Then set dmz_enabled = true (also adds VLAN 50 to the host bridges
-# in proxmox.tf) and apply.
-locals {
-  dmz_enabled = true
-}
-
-module "dmz" {
-  source = "./modules/talos-cluster"
-  count  = local.dmz_enabled ? 1 : 0
-
-  cluster_name  = "k8s-dmz"
-  talos_version = local.talos_version
-  endpoint_ip   = "10.10.50.50"
-  gateway       = "10.10.50.1"
-  vlan_id       = 50
-  tags          = ["prod", "dmz"]
-
-  allow_scheduling_on_control_planes = true
-
-  installer_image = module.talos_image.installer_image
-  iso_ids         = module.talos_image.iso_ids
-
-  nodes = {
-    k8s-dmz-1 = { vm_id = 501, ip = "10.10.50.50", role = "controlplane", proxmox_node = "goose", memory = 4096 }
-    k8s-dmz-2 = { vm_id = 511, ip = "10.10.50.51", role = "worker", proxmox_node = "goose2", memory = 3072 }
-  }
-}
