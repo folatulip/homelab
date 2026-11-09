@@ -1,0 +1,42 @@
+# Migration only (ADR 0001, steps 7-8): the *.lab wildcard points at
+# k8s-geese (10.10.20.221), and any *.lab host k8s-geese doesn't serve yet is
+# forwarded to k8s-trusted's Traefik (10.10.20.201). Moving an app is then just
+# its PR, no DNS change. Delete this file with k8s-trusted (step 8).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-fallback
+  namespace: traefik
+data:
+  fallback.yaml: |
+    http:
+      routers:
+        # priority 1 = lowest, so every real route (Ingress, pve) wins
+        k8s-trusted:
+          rule: HostRegexp(`^[a-z0-9-]+\.lab\.felixlatulip\.ca$`)
+          priority: 1
+          entryPoints: [websecure]
+          tls: {} # wildcard cert from the default TLSStore
+          service: k8s-trusted
+        k8s-trusted-http:
+          rule: HostRegexp(`^[a-z0-9-]+\.lab\.felixlatulip\.ca$`)
+          priority: 1
+          entryPoints: [web]
+          service: k8s-trusted-http
+
+      services:
+        k8s-trusted:
+          loadBalancer:
+            servers:
+              - url: https://10.10.20.201
+            serversTransport: k8s-trusted
+        k8s-trusted-http:
+          loadBalancer:
+            servers:
+              - url: http://10.10.20.201
+
+      serversTransports:
+        # k8s-trusted serves the same *.lab wildcard cert. Any name under
+        # .lab matches it, so the cert is still verified.
+        k8s-trusted:
+          serverName: fallback.lab.felixlatulip.ca
