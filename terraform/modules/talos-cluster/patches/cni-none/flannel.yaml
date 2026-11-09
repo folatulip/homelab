@@ -1,0 +1,6 @@
+# cni = "none": no Flannel, the CNI (Cilium) is installed after bootstrap.
+# Talos >= 1.14: Flannel is its own document; deleting it disables Flannel.
+# Nodes stay NotReady until the CNI is running.
+apiVersion: v1alpha1
+kind: KubeFlannelCNIConfig
+$patch: delete

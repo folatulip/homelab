@@ -27,8 +27,9 @@ variable "prefix_length" {
 }
 
 variable "vlan_id" {
-  type    = number
-  default = null
+  type        = number
+  default     = null
+  description = "VLAN tag for every node. A node can override it (nodes.*.vlan_id)."
 }
 
 variable "bridge" {
@@ -40,6 +41,23 @@ variable "allow_scheduling_on_control_planes" {
   type        = bool
   default     = false
   description = "Run regular pods on control plane nodes (CP + worker)."
+}
+
+variable "cni" {
+  type        = string
+  default     = "flannel"
+  description = "\"flannel\" (Talos default) or \"none\" (bring your own CNI, e.g. Cilium)."
+
+  validation {
+    condition     = contains(["flannel", "none"], var.cni)
+    error_message = "cni must be \"flannel\" or \"none\"."
+  }
+}
+
+variable "kube_proxy" {
+  type        = bool
+  default     = true
+  description = "Deploy kube-proxy. Set to false when the CNI replaces it (Cilium)."
 }
 
 variable "tags" {
@@ -69,10 +87,26 @@ variable "nodes" {
     disk_size    = optional(number, 20)
     # Second disk (scsi1 = /dev/sdb) for Longhorn, in GB. 0 = none.
     data_disk_size = optional(number, 0)
+    # Override the cluster's vlan_id / gateway, for a node on another VLAN.
+    vlan_id = optional(number)
+    gateway = optional(string)
+    # "trusted" or "dmz" (doc/adr/0001-single-cluster-cilium.md). null = no zone.
+    zone = optional(string)
   }))
 
   validation {
     condition     = alltrue([for n in var.nodes : contains(["controlplane", "worker"], n.role)])
     error_message = "Each node role must be \"controlplane\" or \"worker\"."
+  }
+
+  validation {
+    condition     = alltrue([for n in var.nodes : n.zone == null || contains(["trusted", "dmz"], coalesce(n.zone, "-"))])
+    error_message = "Each node zone must be null, \"trusted\" or \"dmz\"."
+  }
+
+  # DMZ workloads must never share a node with the control plane
+  validation {
+    condition     = alltrue([for n in var.nodes : !(n.role == "controlplane" && n.zone == "dmz")])
+    error_message = "A control plane can't be in the dmz zone."
   }
 }
