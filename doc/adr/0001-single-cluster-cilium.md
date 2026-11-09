@@ -52,17 +52,19 @@ Why keep VLAN 50 at all if Cilium does the isolation: Cilium masquerades pod egr
 - Every node has `node-restriction.kubernetes.io/zone: trusted|dmz`. Kubelets can't set labels under that prefix (NodeRestriction), so a compromised DMZ node can't relabel itself as trusted. Talos writes node labels with the node's own credentials, so it can't set this one: Terraform sets it as admin with `kubectl label` once the node registers (`terraform_data.zone_label` in the talos-cluster module).
 - DMZ nodes also have a `zone=dmz:NoSchedule` taint.
 - Every namespace has a `felixlatulip.ca/zone: trusted|dmz` label.
-- Pods are pinned with a **required** node affinity on the zone label, not just the taint. A trusted pod can never land on a DMZ node, even if the taint gets removed.
-- A **ValidatingAdmissionPolicy** (built in, no Kyverno) enforces it: namespaces must have a zone label, and pods must have the node affinity matching their namespace's zone. Rejected otherwise.
-- Flux adds the affinity, toleration and namespace label to everything under `apps/dmz/` with Kustomization `patches`, so apps don't each repeat it. HelmReleases in the DMZ need it in their values, and the admission policy catches it if forgotten.
+- DMZ pods are pinned with a **required** node affinity on the zone label. Trusted pods are kept off DMZ nodes by the taint: a node can't change its own taints or delete its own Node object (NodeRestriction), so a compromised DMZ node can't remove it.
+- Two **ValidatingAdmissionPolicies** (built in, no Kyverno) enforce it (`infrastructure/zone-isolation/`):
+  - every namespace has `felixlatulip.ca/zone: trusted|dmz` (except built-ins like `kube-system`), and the zone can't change afterwards
+  - pods in a dmz namespace need the DMZ affinity on every node selector term; pods anywhere else can't tolerate the DMZ taint; no pod can set `spec.nodeName` (it skips the scheduler). `kube-system` is skipped, the Cilium agent runs on every node.
+- Flux adds the zone label to every namespace, and the affinity, toleration and `automountServiceAccountToken: false` to every DMZ Deployment, with Kustomization `patches` in `kubernetes/cluster/`. Apps don't repeat it. HelmReleases in the DMZ need it in their values, and the admission policy catches it if forgotten.
 - DMZ namespaces enforce Pod Security `restricted`.
 
 ### 4. Network policies
 
 Cilium cluster-wide policies, selected by the namespace zone label:
 
-- **DMZ pods:** egress only to cluster DNS and the internet (`0.0.0.0/0` except RFC 1918 ranges). Ingress only from `traefik-dmz`.
-- **Trusted pods:** ingress deny from any DMZ endpoint.
+- **DMZ pods:** egress only to other DMZ pods, cluster DNS and the internet (`0.0.0.0/0` except private ranges). Ingress only from other DMZ pods. Only `traefik-dmz` can reach the API server.
+- **Trusted pods:** ingress deny from any DMZ endpoint. A deny wins over any allow, so this holds even if the DMZ policy is wrong.
 - Default-deny in DMZ namespaces. Trusted namespaces stay default-allow for now (can be tightened later, one app at a time).
 
 ### 5. Two Traefik instances
@@ -70,13 +72,16 @@ Cilium cluster-wide policies, selected by the namespace zone label:
 | | Trusted | DMZ |
 |---|---|---|
 | Release | `traefik` in `traefik` | `traefik-dmz` in `traefik-dmz` |
-| IngressClass | `traefik` (default) | `traefik-dmz` |
+| Matches | `ingressClassName: traefik` (default class) | annotation `kubernetes.io/ingress.class: traefik-dmz` |
+| RBAC | ClusterRole | Roles in an allowlist of namespaces |
 | Service | LoadBalancer `10.10.20.221` | ClusterIP only |
 | Runs on | trusted nodes | DMZ nodes |
 
 A single Traefik would be a hole: cloudflared forwards public requests to Traefik, and Traefik routes by `Host` header, so a public request with `Host: vaultwarden.lab.felixlatulip.ca` would reach Vaultwarden.
 
-Both IngressClasses have the same controller name (`traefik.io/ingress-controller`), so each Traefik has to be pinned to its class with `providers.kubernetesIngress.ingressClass`. Otherwise both would serve both.
+Each Traefik is pinned to its class with `providers.kubernetesIngress.ingressClass`, otherwise both would serve both.
+
+The chart's ClusterRole can read every Secret in the cluster, which the public Traefik must never have. So `traefik-dmz` uses `rbac.namespaced: true`: Roles only in the namespaces listed in its values. That mode can't read IngressClass objects, so it matches the old annotation instead of `ingressClassName`; Flux sets the annotation on every Ingress in `apps/dmz/`. A new DMZ app needs its namespace added to that list.
 
 The DMZ Traefik doesn't need a LAN IP: cloudflared reaches it through its ClusterIP. That means no LB pool on VLAN 50 at all. The tunnel's public hostnames move to `traefik-dmz.traefik-dmz.svc.cluster.local`.
 
