@@ -63,6 +63,7 @@ spec:
         # Allowlist: add the namespace of every new DMZ app here.
         namespaces:
           - hello
+          - uptime-kuma
         publishedService:
           enabled: false # ClusterIP, nothing to publish
       # No IngressRoutes: the CRD provider can't be limited to one class

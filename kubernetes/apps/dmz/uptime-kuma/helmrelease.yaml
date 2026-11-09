@@ -1,0 +1,68 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: uptime-kuma
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: uptime-kuma
+      version: 1.6.1 # Uptime Kuma 2.5.6
+      sourceRef:
+        kind: HelmRepository
+        name: helmforge
+  install:
+    remediation: { retries: 3 }
+  upgrade:
+    remediation: { retries: 3 }
+  # All values: https://github.com/helmforgedev/charts/blob/main/charts/uptime-kuma/values.yaml
+  # Chart already uses Recreate, so only one pod ever touches the SQLite DB.
+  # The apps-dmz patches (kubernetes/cluster/apps.yaml) don't reach objects
+  # Helm creates, so the DMZ settings are repeated here as values.
+  values:
+    database:
+      type: sqlite
+
+    persistence:
+      existingClaim: uptime-kuma-data # pvcs.yaml (local-path, never pruned)
+
+    # Restricted Pod Security: run as the image's node user, not root.
+    # The entrypoint only drops privileges when started as root, so this is fine.
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      seccompProfile: { type: RuntimeDefault }
+
+    # DMZ nodes only (zone-isolation rejects the pod otherwise)
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: node-restriction.kubernetes.io/zone
+                  operator: In
+                  values: [dmz]
+    tolerations:
+      - key: felixlatulip.ca/zone
+        operator: Equal
+        value: dmz
+        effect: NoSchedule
+
+    # Public Ingress for traefik-dmz. It matches the annotation, not
+    # ingressClassName (empty = left out). Cloudflare terminates HTTPS.
+    ingress:
+      enabled: true
+      ingressClassName: ""
+      annotations:
+        kubernetes.io/ingress.class: traefik-dmz
+      hosts:
+        - host: status.felixlatulip.ca
+          paths:
+            - path: /
+              pathType: Prefix
+
+    resources:
+      requests: { cpu: 20m, memory: 128Mi }
+      limits: { memory: 512Mi }

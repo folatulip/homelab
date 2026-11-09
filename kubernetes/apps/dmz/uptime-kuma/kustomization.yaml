@@ -1,0 +1,9 @@
+# Uptime Kuma: https://status.felixlatulip.ca (through the Cloudflare Tunnel)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: uptime-kuma
+resources:
+  - namespace.yaml
+  - pvcs.yaml
+  - helmrepository.yaml
+  - helmrelease.yaml
