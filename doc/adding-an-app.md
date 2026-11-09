@@ -73,4 +73,4 @@ flux get helmreleases -n $app
 kubectl -n $app get pods,ingress
 ```
 
-Public apps go in `kubernetes/apps/dmz/` and need a tunnel hostname. See [networking.md](networking.md#public-apps-k8s-dmz).
+Public apps go in `kubernetes/apps/dmz/` and need a tunnel hostname. See [networking.md](networking.md#public-apps-dmz).

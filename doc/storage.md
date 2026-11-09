@@ -10,5 +10,5 @@
 
 **`longhorn-retain`** is the same, but deleting the PVC keeps the volume (it shows as Released in the Longhorn UI). Use it for data that can't be rebuilt from git, and add the `kustomize.toolkit.fluxcd.io/prune: disabled` annotation so Flux never deletes the PVC either. To reattach a released volume: Longhorn UI → Volume → Create PV/PVC.
 
-**`local-path`** is there for scratch data on k8s-trusted, and is the only storage on k8s-dmz: set `storageClassName: local-path`. Its volumes are directories under `/var/mnt/local-path-provisioner` on one node's system disk, aren't replicated or backed up, and share the ~19 GB EPHEMERAL partition with images and logs.
+**`local-path`** is there for scratch data, and is the only storage for DMZ apps (Longhorn stays on trusted nodes): set `storageClassName: local-path`. Its volumes are directories under `/var/mnt/local-path-provisioner` on one node's system disk, aren't replicated or backed up, and share the ~19 GB EPHEMERAL partition with images and logs.
 
