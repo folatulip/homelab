@@ -5,7 +5,7 @@
 # =====================================================================
 
 locals {
-  talos_version = "v1.14.4"
+  talos_version = "v1.14.5"
 }
 
 # One Talos image shared by all clusters.
