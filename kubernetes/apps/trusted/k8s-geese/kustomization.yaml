@@ -9,3 +9,4 @@ resources:
   - ../hello # test app, no data
   - ../proxmox # pve.lab route, no data. Still on k8s-trusted too until step 8 (rollback).
   - ../vaultwarden # data restored from Longhorn backup vaultwarden-migrate. Old copy suspended at 0 on k8s-trusted (rollback).
+  - ../sure # 4 volumes restored from Longhorn backups sure-*-migrate. Old copy at 0 on k8s-trusted (rollback).
