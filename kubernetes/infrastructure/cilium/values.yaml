@@ -1,0 +1,60 @@
+# Cilium values, used by the HelmRelease and by scripts/bootstrap-cilium.sh.
+# All values: https://github.com/cilium/cilium/blob/main/install/kubernetes/cilium/values.yaml
+
+# --- Talos (https://docs.siderolabs.com, "Deploying Cilium CNI") ------------
+ipam:
+  mode: kubernetes # pod CIDRs from Kubernetes (Talos default 10.244.0.0/16)
+# No kube-proxy (Talos patch no-kube-proxy/). Cilium reaches the API server
+# through KubePrism, Talos' local load balancer on every node.
+kubeProxyReplacement: true
+k8sServiceHost: localhost
+k8sServicePort: 7445
+# Talos already mounts cgroup v2, and doesn't allow SYS_MODULE
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+securityContext:
+  capabilities:
+    ciliumAgent: [CHOWN, KILL, NET_ADMIN, NET_RAW, IPC_LOCK, SYS_ADMIN, SYS_RESOURCE, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    cleanCiliumState: [NET_ADMIN, SYS_ADMIN, SYS_RESOURCE]
+
+# --- Networking ---------------------------------------------------------------
+# VXLAN between nodes: trusted (VLAN 20) and DMZ (VLAN 50) nodes only need to
+# reach each other's node IPs (UDP 8472), not each other's pod CIDRs.
+routingMode: tunnel
+tunnelProtocol: vxlan
+
+# LoadBalancer IPs, replacing MetalLB: the pool and the L2 policy are in
+# infrastructure/cilium-config/. L2 announcements use leases, so the agents
+# talk to the API server more than the default rate limit allows.
+l2announcements:
+  enabled: true
+k8sClientRateLimit:
+  qps: 10
+  burst: 20
+
+# --- Placement ----------------------------------------------------------------
+# The agent runs on every node (DaemonSet, tolerates everything). The operator
+# has wide permissions on the cluster, so it stays off DMZ nodes. By default it
+# tolerates every taint, so the taint alone wouldn't keep it off.
+operator:
+  replicas: 1
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node-restriction.kubernetes.io/zone
+                operator: In
+                values: [trusted]
+
+# --- Observability ------------------------------------------------------------
+# See what the network policies drop:
+#   kubectl -n kube-system port-forward svc/hubble-ui 12000:80
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  ui:
+    enabled: true

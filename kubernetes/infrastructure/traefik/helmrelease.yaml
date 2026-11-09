@@ -50,6 +50,11 @@ spec:
           matchLabels:
             app.kubernetes.io/name: traefik
             app.kubernetes.io/instance: traefik-traefik
+    # Only Ingresses with ingressClassName: traefik. traefik-dmz's IngressClass
+    # has the same controller name, so without this it would serve both.
+    providers:
+      kubernetesIngress:
+        ingressClass: traefik
     # Dashboard on :8080, not exposed by the Service; reach it with port-forward.
     api:
       insecure: true
@@ -63,7 +68,10 @@ spec:
     service:
       annotations:
         # Set per cluster (postBuild.substitute in kubernetes/clusters/<cluster>/).
+        # MetalLB reads the first one, Cilium (k8s-geese) the second; each
+        # ignores the other. Drop the MetalLB one with k8s-trusted.
         metallb.io/loadBalancerIPs: ${TRAEFIK_IP}
+        lbipam.cilium.io/ips: ${TRAEFIK_IP}
       spec:
         externalTrafficPolicy: Local # keeps real client IPs in access logs
     resources:

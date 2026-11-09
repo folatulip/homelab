@@ -1,0 +1,14 @@
+# Answer ARP for LoadBalancer IPs, like MetalLB's L2Advertisement.
+# Only trusted nodes: an L2 announcement only works on the node's own subnet,
+# and the pool is on VLAN 20. The zone label is the admin-only one (ADR 0001).
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: trusted
+spec:
+  nodeSelector:
+    matchLabels:
+      node-restriction.kubernetes.io/zone: trusted
+  interfaces:
+    - ^eth0$ # Talos names the Proxmox virtio NIC eth0
+  loadBalancerIPs: true

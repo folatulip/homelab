@@ -1,0 +1,10 @@
+# Second Traefik, for public apps (apps/dmz/), on DMZ nodes only.
+# cloudflared forwards public requests here. A separate Traefik means a public
+# request can never be routed to a trusted app by faking its Host header.
+# See doc/adr/0001-single-cluster-cilium.md.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - helmrepository.yaml
+  - helmrelease.yaml

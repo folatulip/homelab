@@ -60,16 +60,25 @@ check_kustomizations() {
   done < <(find kubernetes -name kustomization.yaml -not -path '*/flux-system/*' | sort)
 }
 
-# 3. kubernetes/clusters is the Flux entry point. It's plain manifests
-#    (no kustomization.yaml of ours), so validate the files directly.
+# 3. kubernetes/clusters (old clusters) and kubernetes/cluster (k8s-geese) are
+#    the Flux entry points. They're plain manifests (no kustomization.yaml of
+#    ours), so validate the files directly.
 check_flux_entrypoint() {
-  echo "::group::kubernetes/clusters"
-  if ! find kubernetes/clusters -name '*.yaml' -not -path '*/flux-system/*' -print0 |
-    xargs -0 kubeconform "${KUBECONFORM_ARGS[@]}"; then
-    echo "::error::kubernetes/clusters failed validation"
-    failed=1
-  fi
-  echo "::endgroup::"
+  local entry
+  for entry in kubernetes/clusters kubernetes/cluster; do
+    # kubernetes/clusters goes away with the old clusters
+    if [[ ! -d $entry ]]; then
+      continue
+    fi
+
+    echo "::group::$entry"
+    if ! find "$entry" -name '*.yaml' -not -path '*/flux-system/*' -print0 |
+      xargs -0 kubeconform "${KUBECONFORM_ARGS[@]}"; then
+      echo "::error::$entry failed validation"
+      failed=1
+    fi
+    echo "::endgroup::"
+  done
 }
 
 check_sops_files
