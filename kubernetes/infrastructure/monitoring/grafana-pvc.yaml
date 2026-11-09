@@ -1,0 +1,14 @@
+# Grafana's DB (users, saved dashboards). Kept out of the chart so a reinstall
+# doesn't wipe it, and never pruned.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: monitoring
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 2Gi }

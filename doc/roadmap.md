@@ -33,7 +33,7 @@ Design and migration order: [ADR 0001](adr/0001-single-cluster-cilium.md).
 
 ## 6. Monitoring
 
-- [ ] Prometheus + Grafana
+- [x] Prometheus + Grafana
 - [ ] Alertmanager
 - [ ] Offsite Uptime Kuma (still alerts if the whole lab is down)
 - [ ] README badges integration with Prometheus via a cron job

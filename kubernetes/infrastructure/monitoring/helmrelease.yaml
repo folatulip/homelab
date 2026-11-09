@@ -23,9 +23,34 @@ spec:
       retries: 3
   # All values: https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml
   values:
-    # Perses is the dashboard UI, no alerting set up (yet)
+    # Grafana gets the Prometheus datasource and the k8s/node dashboards from
+    # the chart for free. No alerting set up (yet).
     grafana:
-      enabled: false
+      enabled: true
+      # Login from grafana-admin.sops.yaml (user folatulip)
+      admin:
+        existingSecret: grafana-admin
+      grafana.ini:
+        server:
+          root_url: https://grafana.lab.felixlatulip.ca
+        users:
+          allow_sign_up: false
+      # PVC from grafana-pvc.yaml. RWO, so the old pod has to stop before the
+      # new one can mount it.
+      persistence:
+        enabled: true
+        existingClaim: grafana-data
+      deploymentStrategy:
+        type: Recreate
+      ingress:
+        enabled: true
+        hosts:
+          - grafana.lab.felixlatulip.ca
+        path: /
+        pathType: Prefix
+      resources:
+        requests: { cpu: 25m, memory: 128Mi }
+        limits: { memory: 512Mi }
     alertmanager:
       enabled: false
 
