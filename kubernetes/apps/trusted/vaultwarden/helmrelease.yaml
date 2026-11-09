@@ -20,7 +20,7 @@ spec:
     domain: https://vaultwarden.lab.felixlatulip.ca
 
     vaultwarden:
-      signupsAllowed: false
+      signupsAllowed: true
       passwordHintsAllowed: false
       orgCreationUsers: "felixlatulip@gmail.com"
 
