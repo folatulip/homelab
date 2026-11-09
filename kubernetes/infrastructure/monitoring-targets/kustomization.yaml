@@ -1,0 +1,12 @@
+# What Prometheus scrapes outside kube-prometheus-stack. Kept out of each
+# app's chart: those apps deploy before monitoring (it depends on Longhorn),
+# so the ServiceMonitor CRDs wouldn't exist yet on a fresh bootstrap.
+# DMZ apps (traefik-dmz, cloudflared) can't be scraped, the zone policy
+# blocks trusted -> dmz traffic.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - longhorn.yaml
+  - traefik.yaml
+  - cert-manager.yaml
+  - flux.yaml

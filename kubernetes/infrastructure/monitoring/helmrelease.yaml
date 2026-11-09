@@ -42,6 +42,36 @@ spec:
         existingClaim: grafana-data
       deploymentStrategy:
         type: Recreate
+      # Community dashboards for the add-ons in monitoring-targets. Grafana
+      # downloads them when the pod starts, into a "Community" folder.
+      dashboardProviders:
+        dashboardproviders.yaml:
+          apiVersion: 1
+          providers:
+            - name: community
+              folder: Community
+              type: file
+              disableDeletion: true
+              options:
+                path: /var/lib/grafana/dashboards/community
+      dashboards:
+        community:
+          longhorn:
+            gnetId: 16888 # Longhorn Monitoring & Backups
+            revision: 14
+            datasource: Prometheus
+          traefik:
+            gnetId: 17347 # Traefik Official Kubernetes Dashboard
+            revision: 9
+            datasource: Prometheus
+          cert-manager:
+            gnetId: 20842 # cert-manager (from the kubernetes mixin)
+            revision: 3
+            datasource: Prometheus
+          # Not on grafana.com; pinned to a commit of Flux's example repo
+          flux-control-plane:
+            url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/7ab65dc8b90f7a6751d88f18bbb4e1bee33bf334/monitoring/configs/dashboards/control-plane.json
+            datasource: Prometheus
       ingress:
         enabled: true
         hosts:
