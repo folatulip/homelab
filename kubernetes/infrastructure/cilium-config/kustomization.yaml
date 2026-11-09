@@ -1,0 +1,7 @@
+# Cilium LoadBalancer IPs (replaces metallb-config). These are Cilium CRDs,
+# so this folder needs Cilium running first.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - lb-pool.yaml
+  - l2-policy.yaml
