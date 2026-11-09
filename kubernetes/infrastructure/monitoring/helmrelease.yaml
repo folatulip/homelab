@@ -24,7 +24,7 @@ spec:
   # All values: https://github.com/prometheus-community/helm-charts/blob/main/charts/kube-prometheus-stack/values.yaml
   values:
     # Grafana gets the Prometheus datasource and the k8s/node dashboards from
-    # the chart for free. No alerting set up (yet).
+    # the chart for free.
     grafana:
       enabled: true
       # Login from grafana-admin.sops.yaml (user folatulip)
@@ -51,8 +51,33 @@ spec:
       resources:
         requests: { cpu: 25m, memory: 128Mi }
         limits: { memory: 512Mi }
+    # Fires the chart's default alert rules. No receiver yet, so alerts only
+    # show up in its UI (and in Grafana's Alerting page).
     alertmanager:
-      enabled: false
+      enabled: true
+      alertmanagerSpec:
+        retention: 120h
+        # Links in alerts point at the HTTPS ingress
+        externalUrl: https://alertmanager.lab.felixlatulip.ca
+        # Silences and notification state, can be rebuilt so plain longhorn
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: longhorn
+              accessModes: [ReadWriteOnce]
+              resources:
+                requests: { storage: 1Gi }
+        resources:
+          requests: { cpu: 10m, memory: 32Mi }
+          limits: { memory: 128Mi }
+      # LAN access, no login, same as Prometheus
+      ingress:
+        enabled: true
+        hosts:
+          - alertmanager.lab.felixlatulip.ca
+        paths:
+          - /
+        pathType: Prefix
 
     # Talos binds these to localhost and Cilium replaces kube-proxy, so the
     # scrapes would just fail
