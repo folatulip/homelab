@@ -1,0 +1,10 @@
+# Keeps the dmz and trusted zones apart on k8s-geese (ADR 0001):
+# - admission policies: where pods can run, every namespace has a zone
+# - Cilium network policies: who can talk to whom
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - policy-namespaces.yaml
+  - policy-pods.yaml
+  - netpol-dmz.yaml
+  - netpol-trusted.yaml
