@@ -1,12 +1,12 @@
 # ADR 0001: One cluster with Cilium, DMZ on its own VLAN
 
-- **Status:** Proposed
+- **Status:** Accepted, done on 2026-11-09
 - **Date:** 2026-11-08
 - **Roadmap:** [3. One cluster](../roadmap.md#3-one-cluster)
 
 ## Context
 
-Right now there are two Talos clusters, one per VLAN:
+Before this ADR there were two Talos clusters, one per VLAN:
 
 | Cluster | VLAN | Nodes | RAM | Runs |
 |---|---|---|---|---|
@@ -117,6 +117,8 @@ Only between node IPs, not whole subnets. The firewall is stateful, so replies a
 - Trusted LB pool: `10.10.20.221`–`10.10.20.240`. New range so it never overlaps MetalLB's `.200`–`.220` while both clusters run.
 - Each app is cut over with its own UniFi DNS record (`vaultwarden.lab` → `10.10.20.221`), which wins over the wildcard. Rollback = delete the record.
 - When everything is moved, point the `*.lab` wildcard at `.221` and delete the per-app records.
+
+**What was done instead:** no per-app records. The wildcard moved to `.221` before the apps, and k8s-geese's Traefik had a catch-all route (priority 1) that sent any `*.lab` host it didn't serve yet to k8s-trusted's Traefik. Moving an app was then only its PR, and the route was deleted with k8s-trusted.
 - The new cluster gets its own `*.lab` wildcard cert from cert-manager.
 
 ### 10. Flux layout
@@ -141,6 +143,19 @@ There isn't enough RAM to run the new cluster next to both old ones, so k8s-dmz 
 8. `chore/decommission-k8s-trusted`: destroy, then resize cp1 to 12 GB and w1 to 6 GB, add dmz2. Remove MetalLB and `kubernetes/clusters/`.
 9. `chore/readme-single-cluster`: README, diagram, docs. Set this ADR to **Accepted**.
 
+### How it went
+
+Steps 1 to 9 are done (PRs #34 to #56, plus this doc update). What wasn't in the plan:
+
+- The UniFi DMZ → trusted rules need **Src. Zone = DMZ**, not Internal, or they never match (dmz1 hung on `waiting for apid`).
+- Terraform labeled the nodes before the API server answered; the module now waits for `/readyz`.
+- kube-proxy came up anyway until `KubeProxyConfig` got `enabled: false` (section 2).
+- The step 6 tests found the DMZ-node-to-trusted-pod hole, fixed with the `fromNodes` deny (section 4). The Cilium health endpoints had to be excluded from that policy, and the agents need a restart when `nodeSelectorLabels` changes (`rollOutCiliumPods`).
+- The admission policy's `spec.nodeName` rule blocked Longhorn's instance managers, so `longhorn-system` is allowed to use it.
+- Traefik's topology spread counted the DMZ nodes; `nodeTaintsPolicy: Honor` fixed the stuck rollout.
+- Data moved with Longhorn backups: final backup with the app at 0 replicas, restore on k8s-geese, then a PV pre-bound to the PVC Flux creates. The `*-migrate` backups stay on the NAS.
+- The final resize changed both trusted nodes in one apply. Talos cordoned both at once, so LAN apps were down ~5 min.
+
 ## Consequences
 
 **Better**
@@ -162,7 +177,7 @@ There isn't enough RAM to run the new cluster next to both old ones, so k8s-dmz 
 
 ## Open questions
 
-- [ ] Cluster name `k8s-geese`?
+- [x] Cluster name `k8s-geese`? Yes.
 - [ ] Are `10.10.20.60-61`, `10.10.50.60-61` and `10.10.20.221-240` outside the UniFi DHCP ranges?
-- [ ] Do the hosts have disk space for two more 50 GB Longhorn disks while both clusters run?
-- [ ] Does anything on the LAN use the DMZ Traefik at `10.10.50.201` directly? (Section 5 drops it.)
+- [x] Do the hosts have disk space for two more 50 GB Longhorn disks while both clusters run? Yes.
+- [x] Does anything on the LAN use the DMZ Traefik at `10.10.50.201` directly? (Section 5 drops it.) No, nothing broke.
