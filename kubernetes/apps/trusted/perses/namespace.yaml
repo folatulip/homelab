@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: perses
-  labels:
-    # Lower to "baseline" only if the chart's pods can't run as non-root.
-    pod-security.kubernetes.io/enforce: restricted

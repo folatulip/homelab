@@ -1,8 +1,11 @@
-# Prometheus + operator, node-exporter and kube-state-metrics (kube-prometheus-stack).
+# Prometheus + operator, Grafana, node-exporter and kube-state-metrics
+# (kube-prometheus-stack).
 # The CRDs come from the chart (crds: CreateReplace).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespace.yaml
   - helmrepository.yaml
+  - grafana-admin.sops.yaml
+  - grafana-pvc.yaml
   - helmrelease.yaml
