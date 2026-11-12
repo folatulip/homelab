@@ -42,6 +42,7 @@ My homelab as code. Terraform builds the Proxmox VMs and one Talos Kubernetes cl
 |---|---|---|
 | [Vaultwarden](https://github.com/dani-garcia/vaultwarden) | Password manager | `vaultwarden.lab.felixlatulip.ca` |
 | [Sure](https://github.com/we-promise/sure) | Personal finance | `sure.lab.felixlatulip.ca` |
+| [Obsidian LiveSync](https://github.com/vrtmrz/obsidian-livesync) | Obsidian vault sync (CouchDB) | `obsidian.lab.felixlatulip.ca` |
 | hello | Test page, public (DMZ) | `hello.felixlatulip.ca` |
 
 ## Network Topology

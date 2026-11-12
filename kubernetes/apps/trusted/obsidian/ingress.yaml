@@ -1,0 +1,16 @@
+# HTTPS from Traefik's default *.lab wildcard cert, so no tls section needed.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: couchdb
+spec:
+  rules:
+    - host: obsidian.lab.felixlatulip.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: couchdb
+                port: { number: 5984 }

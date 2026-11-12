@@ -1,0 +1,15 @@
+# Obsidian Self-hosted LiveSync: a CouchDB the Obsidian plugin syncs vaults
+# through. LAN only: https://obsidian.lab.felixlatulip.ca
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: obsidian
+resources:
+  - namespace.yaml
+  - secret.sops.yaml
+  - pvcs.yaml
+  - couchdb.yaml
+  - ingress.yaml
+configMapGenerator:
+  - name: couchdb-config
+    files:
+      - livesync.ini
