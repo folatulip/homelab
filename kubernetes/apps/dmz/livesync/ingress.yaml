@@ -1,11 +1,12 @@
-# HTTPS from Traefik's default *.lab wildcard cert, so no tls section needed.
+# Public Ingress. Flux points it at traefik-dmz (kubernetes/cluster/apps.yaml)
+# and Cloudflare terminates HTTPS, so no class or tls section here.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: couchdb
 spec:
   rules:
-    - host: obsidian.lab.felixlatulip.ca
+    - host: obsidian.felixlatulip.ca
       http:
         paths:
           - path: /

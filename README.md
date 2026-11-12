@@ -42,7 +42,7 @@ My homelab as code. Terraform builds the Proxmox VMs and one Talos Kubernetes cl
 |---|---|---|
 | [Vaultwarden](https://github.com/dani-garcia/vaultwarden) | Password manager | `vaultwarden.lab.felixlatulip.ca` |
 | [Sure](https://github.com/we-promise/sure) | Personal finance | `sure.lab.felixlatulip.ca` |
-| [Obsidian LiveSync](https://github.com/vrtmrz/obsidian-livesync) | Obsidian vault sync (CouchDB) | `obsidian.lab.felixlatulip.ca` |
+| [Obsidian LiveSync](https://github.com/vrtmrz/obsidian-livesync) | Obsidian vault sync (CouchDB), public (DMZ) | `obsidian.felixlatulip.ca` |
 | hello | Test page, public (DMZ) | `hello.felixlatulip.ca` |
 
 ## Network Topology
@@ -224,6 +224,7 @@ sed -i '' "s/APP_NAME/$app/g" kubernetes/apps/trusted/$app/*.yaml
 | [Talos](doc/talos.md) | 1.14 quirks, upgrades |
 | [Rebuild](doc/rebuild.md) | disaster recovery |
 | [Sure](doc/runbooks/sure.md) | backups, restore, upgrades |
+| [Obsidian LiveSync](doc/runbooks/obsidian.md) | Cloudflare Access, sync user, device setup |
 | [cert-manager to Helm](doc/runbooks/cert-manager-helm-migration.md) | one-time takeover of the static manifest |
 | [ADR 0001](doc/adr/0001-single-cluster-cilium.md) | one cluster with Cilium (accepted) |
 

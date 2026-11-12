@@ -1,0 +1,14 @@
+# DMZ apps only get local-path (Longhorn stays on trusted nodes): one node's
+# disk, not replicated or backed up. Fine here, every device keeps a full copy
+# of the vault. The annotation stops Flux from ever pruning the PVC.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: couchdb-data
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: local-path
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 5Gi }
