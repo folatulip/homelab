@@ -1,8 +1,9 @@
 # Obsidian Self-hosted LiveSync: a CouchDB the Obsidian plugin syncs vaults
-# through. LAN only: https://obsidian.lab.felixlatulip.ca
+# through. Public at https://obsidian.felixlatulip.ca (Cloudflare Tunnel, behind
+# Cloudflare Access). Setup and recovery: doc/runbooks/obsidian.md
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: obsidian
+namespace: livesync
 resources:
   - namespace.yaml
   - secret.sops.yaml

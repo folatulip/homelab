@@ -1,11 +1,13 @@
 # Single CouchDB node. Stay on 3.x, a major upgrade needs a migration.
+# Deployment (not StatefulSet) so the apps-dmz patches pin it to DMZ nodes.
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: couchdb
 spec:
-  serviceName: couchdb
   replicas: 1
+  strategy:
+    type: Recreate # RWO volume, only one pod at a time
   selector:
     matchLabels: { app: couchdb }
   template:
@@ -29,7 +31,7 @@ spec:
           ports:
             - containerPort: 5984
           readinessProbe:
-            httpGet: { path: /_up, port: 5984 } # no auth needed on /_up
+            httpGet: { path: /_up, port: 5984 } # only path open without a login
             periodSeconds: 10
           securityContext:
             allowPrivilegeEscalation: false
