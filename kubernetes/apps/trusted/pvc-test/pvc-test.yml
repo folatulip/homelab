@@ -22,7 +22,7 @@ spec:
     seccompProfile: { type: RuntimeDefault }
   containers:
     - name: test
-      image: busybox:1.37
+      image: busybox:1.38
       command: ["sh", "-c", "date >> /data/log && cat /data/log && sleep 3600"]
       volumeMounts:
         - { name: data, mountPath: /data }
