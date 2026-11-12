@@ -1,0 +1,60 @@
+# Single CouchDB node. Stay on 3.x, a major upgrade needs a migration.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: couchdb
+spec:
+  serviceName: couchdb
+  replicas: 1
+  selector:
+    matchLabels: { app: couchdb }
+  template:
+    metadata:
+      labels: { app: couchdb }
+    spec:
+      securityContext:
+        runAsUser: 5984 # couchdb user in the image
+        runAsGroup: 5984
+        fsGroup: 5984
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: couchdb
+          image: couchdb:3.5.3
+          env:
+            - name: COUCHDB_USER
+              valueFrom: { secretKeyRef: { name: couchdb-admin, key: COUCHDB_USER } }
+            - name: COUCHDB_PASSWORD
+              valueFrom: { secretKeyRef: { name: couchdb-admin, key: COUCHDB_PASSWORD } }
+          ports:
+            - containerPort: 5984
+          readinessProbe:
+            httpGet: { path: /_up, port: 5984 } # no auth needed on /_up
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 20m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /opt/couchdb/data
+            # Single file mount so the entrypoint can still write docker.ini in local.d
+            - name: config
+              mountPath: /opt/couchdb/etc/local.d/livesync.ini
+              subPath: livesync.ini
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: couchdb-data }
+        - name: config
+          configMap: { name: couchdb-config }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: couchdb
+spec:
+  selector: { app: couchdb }
+  ports:
+    - port: 5984
