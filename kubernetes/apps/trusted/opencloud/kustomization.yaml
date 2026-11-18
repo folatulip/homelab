@@ -1,0 +1,11 @@
+# OpenCloud (file sync and share). LAN only: https://opencloud.lab.felixlatulip.ca
+# User files are on the NAS "cloud" share over NFS, the rest on Longhorn.
+# Setup and recovery: doc/runbooks/opencloud.md
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: opencloud
+resources:
+  - namespace.yaml
+  - secret.sops.yaml
+  - pvcs.yaml
+  - app.yaml

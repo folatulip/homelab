@@ -1,0 +1,108 @@
+# OpenCloud runs every service in one process (`opencloud server`), like the
+# official compose file. Never run 2 replicas: the Longhorn volumes are RWO and
+# the embedded NATS isn't clustered. Recreate stops the old pod first.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencloud
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: opencloud }
+  template:
+    metadata:
+      labels: { app: opencloud }
+    spec:
+      # a hard kill can leave the storage metadata half written
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: 1000 # default user in the image
+        runAsGroup: 1000
+        fsGroup: 1000 # Longhorn volumes only, the kubelet skips NFS
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: opencloud
+          image: opencloudeu/opencloud:9.1.1
+          # init only on the first boot (makes opencloud.yaml with random
+          # secrets), exec so the server gets SIGTERM and shuts down cleanly
+          command: ["/bin/sh", "-c"]
+          args:
+            - "[ -f /etc/opencloud/opencloud.yaml ] || opencloud init; exec opencloud server"
+          env:
+            - name: OC_URL
+              value: https://opencloud.lab.felixlatulip.ca
+            - name: OC_INSECURE # real Let's Encrypt cert, keep checks on
+              value: "false"
+            - name: PROXY_TLS # Traefik does HTTPS
+              value: "false"
+            - name: OC_LOG_LEVEL
+              value: info
+            # decomposed keeps metadata in .mpk files, posix (the default)
+            # needs xattrs on the NFS share. Can't be changed later.
+            - name: STORAGE_USERS_DRIVER
+              value: decomposed
+            # only read by init on the first boot, changing it later does nothing
+            - name: IDM_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: opencloud-admin, key: IDM_ADMIN_PASSWORD } }
+          ports:
+            - containerPort: 9200
+          startupProbe: # first boot creates the config, spaces and indexes
+            httpGet: { path: /status.php, port: 9200 }
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /status.php, port: 9200 }
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          resources:
+            requests: { cpu: 100m, memory: 512Mi }
+            limits: { memory: 2Gi }
+          volumeMounts:
+            - name: config
+              mountPath: /etc/opencloud
+            - name: data
+              mountPath: /var/lib/opencloud
+            # Must be a single filesystem (OpenCloud renames uploads into it)
+            - name: files
+              mountPath: /var/lib/opencloud/storage/users
+      volumes:
+        - name: config
+          persistentVolumeClaim: { claimName: opencloud-config }
+        - name: data
+          persistentVolumeClaim: { claimName: opencloud-data }
+        - name: files
+          persistentVolumeClaim: { claimName: opencloud-files }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencloud
+spec:
+  selector: { app: opencloud }
+  ports:
+    - port: 80
+      targetPort: 9200
+---
+# LAN only: *.lab resolves to Traefik through the UniFi wildcard record and
+# uses Traefik's default wildcard cert. The pod also calls this URL itself
+# (OIDC), which works since pods resolve *.lab too.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opencloud
+spec:
+  rules:
+    - host: opencloud.lab.felixlatulip.ca
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: opencloud
+                port: { number: 80 }

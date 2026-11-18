@@ -1,0 +1,64 @@
+# Config and internal data on longhorn-retain (backed up to the NAS daily).
+# Flux never prunes these (annotation), even if opencloud is removed from git.
+# opencloud.yaml made by `opencloud init`: holds all the generated secrets.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencloud-config
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 1Gi }
+---
+# /var/lib/opencloud minus the user files: accounts (idm), NATS, search
+# index, thumbnails, space metadata.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencloud-data
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: longhorn-retain
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 5Gi }
+---
+# User files: Unraid share "cloud" over NFS, mounted by the kubelet on the
+# trusted nodes. Static PV, no NFS provisioner. Retain + no prune so nothing
+# here can ever wipe the share. The size is just a label, NFS ignores it.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: opencloud-files
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  capacity: { storage: 1Ti }
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef: # only this PVC can bind it
+    namespace: opencloud
+    name: opencloud-files
+  mountOptions:
+    - nfsvers=4
+  nfs:
+    server: 10.10.20.3
+    path: /mnt/user/cloud
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencloud-files
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  storageClassName: ""
+  volumeName: opencloud-files
+  accessModes: [ReadWriteMany]
+  resources:
+    requests: { storage: 1Ti }
