@@ -20,7 +20,6 @@ spec:
         runAsUser: 1000 # default user in the image
         runAsGroup: 1000
         fsGroup: 1000 # Longhorn volumes only, the kubelet skips NFS
-        fsGroupChangePolicy: OnRootMismatch
         runAsNonRoot: true
         seccompProfile: { type: RuntimeDefault }
       containers:
@@ -44,6 +43,8 @@ spec:
             # needs xattrs on the NFS share. Can't be changed later.
             - name: STORAGE_USERS_DRIVER
               value: decomposed
+            - name: STORAGE_USERS_DECOMPOSED_ROOT
+              value: /var/lib/opencloud-files
             # only read by init on the first boot, changing it later does nothing
             - name: IDM_ADMIN_PASSWORD
               valueFrom: { secretKeyRef: { name: opencloud-admin, key: IDM_ADMIN_PASSWORD } }
@@ -67,9 +68,11 @@ spec:
               mountPath: /etc/opencloud
             - name: data
               mountPath: /var/lib/opencloud
+            # Not inside /var/lib/opencloud: the runtime would create the
+            # parent dirs as root and OpenCloud can't write there anymore.
             # Must be a single filesystem (OpenCloud renames uploads into it)
             - name: files
-              mountPath: /var/lib/opencloud/storage/users
+              mountPath: /var/lib/opencloud-files
       volumes:
         - name: config
           persistentVolumeClaim: { claimName: opencloud-config }
