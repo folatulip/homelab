@@ -22,19 +22,21 @@ Shares → cloud → NFS Security Settings:
 
 `all_squash` maps every write to `nobody:users`, like any other Unraid share, so the pod's uid 1000 doesn't matter. DMZ nodes (`10.10.50.x`) aren't in the rule, and UniFi blocks them anyway (ADR 0001).
 
-Check it before merging (writes and deletes a test folder, then checks that `flock` and `rename` work):
+The PV mounts with **NFSv3** and `local_lock=all`, so keep NFSv3 on in Settings → NFS. OpenCloud's WebDAV locks take an exclusive `flock` on files it opened read-only. NFS servers refuse that (`Bad file descriptor`), so the locks have to stay on the client. That's safe because the OpenCloud pod is the only client. NFSv4 ignores `local_lock`. Tested on 2026-11-18. Don't touch the share from other machines, it's OpenCloud's.
+
+Check it before merging (writes, renames and deletes a test folder):
 
 ```sh
 kubectl run nfs-check --rm -i --restart=Never --image=busybox:1.38 --overrides='
 {"spec":{"securityContext":{"runAsUser":1000,"runAsNonRoot":true,"seccompProfile":{"type":"RuntimeDefault"}},
 "containers":[{"name":"nfs-check","image":"busybox:1.38",
-"command":["sh","-c","set -e; d=/c/nfs-check; mkdir $d; echo hi > $d/a; flock $d/a true; mv $d/a $d/b; rm -r $d; echo OK"],
+"command":["sh","-c","set -e; d=/c/nfs-check; mkdir $d; echo hi > $d/a; mv $d/a $d/b; rm -r $d; echo OK"],
 "securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}},
 "volumeMounts":[{"name":"c","mountPath":"/c"}]}],
 "volumes":[{"name":"c","nfs":{"server":"10.10.20.3","path":"/mnt/user/cloud"}}]}}'
 ```
 
-It has to print `OK`. `Read-only file system` = the rule isn't saved yet.
+It has to print `OK`. `Read-only file system` = the rule isn't saved yet. An inline `nfs:` volume can't set mount options, so this doesn't test the locks.
 
 ## Backups
 

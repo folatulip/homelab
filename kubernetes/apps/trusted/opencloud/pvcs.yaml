@@ -44,8 +44,12 @@ spec:
   claimRef: # only this PVC can bind it
     namespace: opencloud
     name: opencloud-files
+  # v3 so locks can stay local: OpenCloud takes exclusive flocks on read-only
+  # files (WebDAV locks), which NFS servers refuse (Bad file descriptor).
+  # Fine since this pod is the only client. v4 ignores local_lock.
   mountOptions:
-    - nfsvers=4
+    - nfsvers=3
+    - local_lock=all
   nfs:
     server: 10.10.20.3
     path: /mnt/user/cloud
