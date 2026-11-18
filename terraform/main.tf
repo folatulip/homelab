@@ -48,8 +48,8 @@ module "geese" {
   iso_ids         = module.talos_image.iso_ids
 
   nodes = {
-    k8s-geese-cp1  = { vm_id = 601, ip = "10.10.20.60", role = "controlplane", proxmox_node = "goose", memory = 12288, cores = 4, data_disk_size = 50, zone = "trusted" }
-    k8s-geese-w1   = { vm_id = 611, ip = "10.10.20.61", role = "worker", proxmox_node = "goose2", memory = 6144, data_disk_size = 50, zone = "trusted" }
+    k8s-geese-cp1  = { vm_id = 601, ip = "10.10.20.60", role = "controlplane", proxmox_node = "goose", memory = 12288, cores = 4, data_disk_size = 250, zone = "trusted" }
+    k8s-geese-w1   = { vm_id = 611, ip = "10.10.20.61", role = "worker", proxmox_node = "goose2", memory = 6144, data_disk_size = 250, zone = "trusted" }
     k8s-geese-dmz1 = { vm_id = 651, ip = "10.10.50.60", role = "worker", proxmox_node = "goose", memory = 3072, vlan_id = 50, gateway = "10.10.50.1", zone = "dmz" }
     k8s-geese-dmz2 = { vm_id = 652, ip = "10.10.50.61", role = "worker", proxmox_node = "goose2", memory = 3072, vlan_id = 50, gateway = "10.10.50.1", zone = "dmz" }
   }

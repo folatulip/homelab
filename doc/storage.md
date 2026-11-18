@@ -2,7 +2,7 @@
 
 **`longhorn`** (trusted nodes only) is the default StorageClass. Each volume is kept on both trusted nodes (2 replicas), one per Proxmox host, so if one goes down its pods can restart on the other with their data.
 
-- Data lives on a dedicated 50 GB disk per node (`data_disk_size` in `terraform/main.tf`), mounted by Talos at `/var/mnt/longhorn` (`patches/data-disk/longhorn-volume.yaml`, applied to nodes with a data disk). With 2 replicas, usable space is about one disk.
+- Data lives on a dedicated 250 GB disk per node (`data_disk_size` in `terraform/main.tf`), mounted by Talos at `/var/mnt/longhorn` (`patches/data-disk/longhorn-volume.yaml`, applied to nodes with a data disk). With 2 replicas, usable space is about one disk.
 - Talos needs the `iscsi-tools` and `util-linux-tools` extensions for Longhorn; they're in the image list in `terraform/main.tf`.
 - UI (no login, so it isn't exposed): `kubectl -n longhorn-system port-forward svc/longhorn-frontend 8000:80`, then http://localhost:8000
 
