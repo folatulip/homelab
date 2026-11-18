@@ -4,8 +4,8 @@
 
 - **Data:**
   - `opencloud-config` (Longhorn, 1Gi): `/etc/opencloud/opencloud.yaml`, made by `opencloud init` on the first boot. It holds every generated secret (JWT, machine auth, IDP keys...). **If it's lost, the user files can't be matched to their accounts anymore.**
-  - `opencloud-data` (Longhorn, 5Gi): `/var/lib/opencloud` minus the files: accounts (idm), NATS, search index, thumbnails, space metadata.
-  - `opencloud-files` (NAS, NFS): `/var/lib/opencloud/storage/users` = Unraid share `cloud`. Static PV, mounted by the kubelet on the trusted nodes.
+  - `opencloud-data` (Longhorn, 5Gi): `/var/lib/opencloud`: accounts (idm), NATS, search index, thumbnails, space metadata.
+  - `opencloud-files` (NAS, NFS): `/var/lib/opencloud-files` (`STORAGE_USERS_DECOMPOSED_ROOT`) = Unraid share `cloud`. Static PV, mounted by the kubelet on the trusted nodes. It's not nested in `/var/lib/opencloud`: the runtime created the parent dirs as root there, and the first boot failed with `mkdir .../storage/metadata: permission denied`.
   - All three have `Retain`/no-prune, so Flux never deletes them.
 - **Storage driver:** `decomposed` (metadata in `.mpk` files next to the blobs). The default `posix` driver needs xattrs on the share, and Unraid over NFS isn't a safe bet for that. It can't be changed once there are files. On the NAS the files are stored by ID, not by name: use OpenCloud (or WebDAV) to get them out, not the share.
 - **Admin login:** user `admin`, password from `secret.sops.yaml` (`IDM_ADMIN_PASSWORD`). It's only read on the first boot. After that, change it in the web UI and update your password manager, not the secret.
