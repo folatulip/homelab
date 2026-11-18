@@ -61,6 +61,8 @@ module "proxmox" {
       share    = "photos"
       username = "proxmox-photos"
       content  = ["images"]
+      # Owned by immich (LXC 202) inside the container, set by hand before
+      options = "uid=100999,gid=100991,file_mode=0770,dir_mode=0770"
     }
     # goose-nas-backup = {
     #  type     = "cifs"
