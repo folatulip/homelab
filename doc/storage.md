@@ -12,3 +12,5 @@
 
 **`local-path`** is there for scratch data, and is the only storage for DMZ apps (Longhorn stays on trusted nodes): set `storageClassName: local-path`. Its volumes are directories under `/var/mnt/local-path-provisioner` on one node's system disk, aren't replicated or backed up, and share the ~19 GB EPHEMERAL partition with images and logs.
 
+
+**NAS shares over NFS** can be mounted straight into a trusted app with a static PV (`nfs:` + a `claimRef` to the app's PVC, `Retain`, no prune). Talos mounts NFS without extensions. Example: `apps/trusted/opencloud/pvcs.yaml` (share `cloud`). The Unraid export needs `rw` for the trusted node IPs only. DMZ nodes can't reach the NAS (ADR 0001), so DMZ apps can't do this.
